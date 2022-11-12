@@ -1,19 +1,17 @@
-import telebot
+import logging
+from aiogram import Bot, Dispatcher, executor, types
 
-# треба ще лібу цю скачати
-# pip install pyTelegramBotAPI
-
-bot = telebot.TeleBot('5626939602:AAHRuLoS6EaWY1OfVHdIn0tBYeLzC6ZZY1k')
-
-
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "Howdy, how are you doing?")
+# Объект бота
+bot = Bot(token="5626939602:AAHRuLoS6EaWY1OfVHdIn0tBYeLzC6ZZY1k")
+# Диспетчер для бота
+dp = Dispatcher(bot)
+# Включаем логирование, чтобы не пропустить важные сообщения
+logging.basicConfig(level=logging.INFO)
 
 
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    bot.reply_to(message, message.text)
+# Хэндлер на команду /test1
+@dp.message_handler(commands="test1")
+async def cmd_test1(message: types.Message):
+    await message.reply("Test 1")
 
-
-bot.infinity_polling()
+executor.start_polling(dp, skip_updates=True)
