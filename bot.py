@@ -32,7 +32,7 @@ async def help(message: types.Message):
     await message.answer(text)
 
 @dp.message_handler(commands="end")
-async def help(message: types.Message):
+async def end(message: types.Message):
     print("Start deletind DB...")
     sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers` ;"""
     my_cursor.execute(sql_command)
