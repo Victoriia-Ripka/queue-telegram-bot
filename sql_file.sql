@@ -9,21 +9,21 @@ SET @OLD_SQL_MODE = @@SQL_MODE, SQL_MODE =
         'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
 -- -----------------------------------------------------
--- Schema queue-bot
+-- Schema queue-bot-kpi
 -- -----------------------------------------------------
 
 -- -----------------------------------------------------
--- Schema queue-bot
+-- Schema queue-bot-kpi
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `queue-bot` DEFAULT CHARACTER SET utf8;
-USE `queue-bot`;
+CREATE SCHEMA IF NOT EXISTS `queue-bot-kpi` DEFAULT CHARACTER SET utf8;
+USE `queue-bot-kpi`;
 
 -- -----------------------------------------------------
--- Table `queue-bot`.`Subjects`
+-- Table `queue-bot-kpi`.`Subjects`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `queue-bot`.`Subjects`;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Subjects`;
 
-CREATE TABLE IF NOT EXISTS `queue-bot`.`Subjects`
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
 (
     `subject_id` INT          NOT NULL AUTO_INCREMENT,
     `title`      VARCHAR(100) NOT NULL,
@@ -37,11 +37,11 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Subjects`
 
 
 -- -----------------------------------------------------
--- Table `queue-bot`.`Students`
+-- Table `queue-bot-kpi`.`Students`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `queue-bot`.`Students`;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Students`;
 
-CREATE TABLE IF NOT EXISTS `queue-bot`.`Students`
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
 (
     `telegram_user_id` INT         NOT NULL,
     `username`         VARCHAR(45) NULL,
@@ -54,11 +54,11 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Students`
 
 
 -- -----------------------------------------------------
--- Table `queue-bot`.`Queues`
+-- Table `queue-bot-kpi`.`Queues`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `queue-bot`.`Queues`;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Queues`;
 
-CREATE TABLE IF NOT EXISTS `queue-bot`.`Queues`
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
 (
     `id_queue`   INT NOT NULL AUTO_INCREMENT,
     `subject_id` INT NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Queues`
     UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
     CONSTRAINT `subject_id fk from Queue to Subjects`
         FOREIGN KEY (`subject_id`)
-            REFERENCES `queue-bot`.`Subjects` (`subject_id`)
+            REFERENCES `queue-bot-kpi`.`Subjects` (`subject_id`)
             ON DELETE CASCADE
             ON UPDATE CASCADE
 )
@@ -75,11 +75,11 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Queues`
 
 
 -- -----------------------------------------------------
--- Table `queue-bot`.`Sign_ups`
+-- Table `queue-bot-kpi`.`Sign_ups`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `queue-bot`.`Sign_ups`;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups`;
 
-CREATE TABLE IF NOT EXISTS `queue-bot`.`Sign_ups`
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 (
     `id_sign_up`       INT NOT NULL AUTO_INCREMENT,
     `id_queue`         INT NOT NULL,
@@ -91,12 +91,12 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Sign_ups`
     UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
     CONSTRAINT `id_queue fk from Sign_ups to Queue`
         FOREIGN KEY (`id_queue`)
-            REFERENCES `queue-bot`.`Queues` (`id_queue`)
+            REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `telegram_user_id fk from Sign_ups to Students`
         FOREIGN KEY (`telegram_user_id`)
-            REFERENCES `queue-bot`.`Students` (`telegram_user_id`)
+            REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)
             ON DELETE NO ACTION
             ON UPDATE NO ACTION
 )
@@ -104,11 +104,11 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Sign_ups`
 
 
 -- -----------------------------------------------------
--- Table `queue-bot`.`Teachers`
+-- Table `queue-bot-kpi`.`Teachers`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `queue-bot`.`Teachers`;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers`;
 
-CREATE TABLE IF NOT EXISTS `queue-bot`.`Teachers`
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
 (
     `id_teacher`        INT         NOT NULL AUTO_INCREMENT,
     `username_telegram` VARCHAR(45) NULL,
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot`.`Teachers`
     UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE,
     CONSTRAINT `id_teacher fk from Teachers to Subjects`
     FOREIGN KEY (`id_teacher`)
-        REFERENCES `queue-bot`.`Subjects` (`id_teacher`)
+        REFERENCES `queue-bot-kpi`.`Subjects` (`id_teacher`)
     ON DELETE NO ACTION
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
