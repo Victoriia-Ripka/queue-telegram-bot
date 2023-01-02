@@ -17,19 +17,22 @@ logging.basicConfig(level=logging.INFO)
 my_cursor = db.mydb.cursor()
 
 class Form(StatesGroup):
-    pass
+    subject = State()
+    teacher = State()
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
     chat_name = "user"
     # chat_name = message["chat"]["first_name"]
     # how to get chat_name in chat and use it in answer?
-    await message.answer("hello, ", chat_name)
+    await message.answer(f"hello, {chat_name}")
+
 
 @dp.message_handler(commands="help")
 async def help(message: types.Message):
     text = "all commands definitions will be here soon"
     await message.answer(text)
+
 
 @dp.message_handler(commands="end")
 async def end(message: types.Message):
@@ -47,6 +50,83 @@ async def end(message: types.Message):
     print("All tables are deleted")
     text = "All tables are deleted"
     await message.answer(text)
+
+
+@dp.message_handler(commands='add_subject')
+async def insert_workmate(message: types.Message):
+    try:
+        await Form.subject.set()
+        await message.answer("""WRITE\nsubject title""")
+
+    except Exception as e:
+        print(e)
+        await message.answer("Conversation Terminated✔")
+        return
+
+
+@dp.message_handler(state=Form.subject)
+async def insert_workmate(message: types.Message, state: FSMContext):
+    data = message.values["text"].split(" ")
+    try:
+        title = data[0].title()
+        teacher_id = data[1]
+    except ValueError:
+        await state.finish()
+        await message.answer("sorry, you input wrong data type. please, try again")
+        return
+
+    if isinstance(title, str) and isinstance(teacher_id, int):
+        new_subject = (title, teacher_id)
+        sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
+        my_cursor.execute(sql, new_subject)  
+        db.mydb.commit() 
+
+    await state.finish()
+    # maybe should add some errors handle
+    if my_cursor.rowcount < 1:
+        await message.answer("Something went wrong, please try again")
+    else:
+        await message.answer(title, " correctly inserted")
+
+
+@dp.message_handler(commands='add_teacher')
+async def insert_workmate(message: types.Message):
+    try:
+        await Form.teacher.set()
+        await message.answer("""WRITE\nusername_telegram, phone_number, email, additional info""")
+
+    except Exception as e:
+        print(e)
+        await message.answer("Conversation Terminated✔")
+        return
+
+
+@dp.message_handler(state=Form.teacher)
+async def insert_workmate(message: types.Message, state: FSMContext):
+    data = message.values["text"].split(" ")
+    try:
+        nusername_telegram = data[0].title()
+        # how to set NULL to fields
+        phone_number = data[1] #may contain nothing
+        email = data[2] #may contain nothing
+        info = data[3] #may contain nothing
+    except ValueError:
+        await state.finish()
+        await message.answer("sorry, you input wrong data type. please, try again")
+        return
+
+    if isinstance(nusername_telegram, str):
+        new_teacher = (nusername_telegram, phone_number, email, info)
+        sql = "INSERT INTO Teachers (id_teacher, username_telegram, phone_number, email, info) VALUES (NULL, %s, %s, %s, %s);"
+        my_cursor.execute(sql, new_teacher)  
+        db.mydb.commit() 
+
+    await state.finish()
+    # maybe should add some errors handle
+    if my_cursor.rowcount < 1:
+        await message.answer("Something went wrong, please try again")
+    else:
+        await message.answer(nusername_telegram, " correctly inserted")
 
 
 if __name__ == '__main__':
