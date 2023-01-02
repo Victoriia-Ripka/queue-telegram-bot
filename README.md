@@ -8,12 +8,12 @@ add_subject - vika
 delete_teacher - vika
 delete_subject - vika
 
-create_queueu
-add_student_to_queue? + add_student
+create_queueu - vitalik
+add_student_to_queue + add_student - vitalik
 
-show_needed_queue
-show_current_student(nearest_future)
-next (queue to next student)
+show_needed_queue - dima
+show_current_student(nearest_future) - dima
+next (queue to next student) - dima
 
 all_teachers
 all_subjects
