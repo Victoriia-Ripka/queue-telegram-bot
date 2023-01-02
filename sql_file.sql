@@ -14,15 +14,15 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema mydb
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
-USE `mydb` ;
+CREATE SCHEMA IF NOT EXISTS `queue-bot-kpi` DEFAULT CHARACTER SET utf8 ;
+USE `queue-bot-kpi` ;
 
 -- -----------------------------------------------------
--- Table `mydb`.`Subjects`
+-- Table `queue-bot-kpi`.`Subjects`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `mydb`.`Subjects` ;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Subjects` ;
 
-CREATE TABLE IF NOT EXISTS `mydb`.`Subjects` (
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects` (
   `subject_id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(100) NOT NULL,
   `id_teacher` INT NOT NULL,
@@ -34,11 +34,11 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Students`
+-- Table `queue-bot-kpi`.`Students`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `mydb`.`Students` ;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Students` ;
 
-CREATE TABLE IF NOT EXISTS `mydb`.`Students` (
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students` (
   `telegram_user_id` INT NOT NULL,
   `username` VARCHAR(45) NULL,
   `firstname` VARCHAR(45) NULL,
@@ -49,11 +49,11 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Queues`
+-- Table `queue-bot-kpi`.`Queues`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `mydb`.`Queues` ;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Queues` ;
 
-CREATE TABLE IF NOT EXISTS `mydb`.`Queues` (
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues` (
   `id_queue` INT NOT NULL AUTO_INCREMENT,
   `subject_id` INT NOT NULL,
   PRIMARY KEY (`id_queue`),
@@ -61,18 +61,18 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Queues` (
   UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
   CONSTRAINT `subject_id fk from Queue to Subjects`
     FOREIGN KEY (`subject_id`)
-    REFERENCES `mydb`.`Subjects` (`subject_id`)
+    REFERENCES `queue-bot-kpi`.`Subjects` (`subject_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Sign_ups`
+-- Table `queue-bot-kpi`.`Sign_ups`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `mydb`.`Sign_ups` ;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups` ;
 
-CREATE TABLE IF NOT EXISTS `mydb`.`Sign_ups` (
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups` (
   `id_sign_up` INT NOT NULL AUTO_INCREMENT,
   `id_queue` INT NOT NULL,
   `telegram_user_id` INT NOT NULL,
@@ -83,23 +83,23 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Sign_ups` (
   UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
   CONSTRAINT `id_queue fk from Sign_ups to Queue`
     FOREIGN KEY (`id_queue`)
-    REFERENCES `mydb`.`Queues` (`id_queue`)
+    REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `telegram_user_id fk from Sign_ups to Students`
     FOREIGN KEY (`telegram_user_id`)
-    REFERENCES `mydb`.`Students` (`telegram_user_id`)
+    REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Teachers`
+-- Table `queue-bot-kpi`.`Teachers`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `mydb`.`Teachers` ;
+DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers` ;
 
-CREATE TABLE IF NOT EXISTS `mydb`.`Teachers` (
+CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers` (
   `id_teacher` INT NOT NULL AUTO_INCREMENT,
   `username_telegram` VARCHAR(45) NULL,
   `phone_number` CHAR(13) NULL,
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Teachers` (
   UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE,
   CONSTRAINT `id_teacher fk from Teachers to Subjects`
     FOREIGN KEY (`id_teacher`)
-    REFERENCES `mydb`.`Subjects` (`id_teacher`)
+    REFERENCES `queue-bot-kpi`.`Subjects` (`id_teacher`)
     ON DELETE NO ACTION
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
