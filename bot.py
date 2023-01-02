@@ -25,7 +25,7 @@ async def start(message: types.Message):
     chat_name = "user"
     # chat_name = message["chat"]["first_name"]
     # how to get chat_name in chat and use it in answer?
-    await message.answer("hello, ", chat_name)
+    await message.answer(f"hello, {chat_name}")
 
 
 @dp.message_handler(commands="help")
