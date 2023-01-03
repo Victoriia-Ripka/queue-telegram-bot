@@ -19,6 +19,7 @@ my_cursor = db.mydb.cursor()
 class Form(StatesGroup):
     subject = State()
     teacher = State()
+    queue = State()
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
@@ -118,8 +119,8 @@ async def insert_workmate(message: types.Message, state: FSMContext):
     if isinstance(nusername_telegram, str):
         new_teacher = (nusername_telegram, phone_number, email, info)
         sql = "INSERT INTO Teachers (id_teacher, username_telegram, phone_number, email, info) VALUES (NULL, %s, %s, %s, %s);"
-        my_cursor.execute(sql, new_teacher)  
-        db.mydb.commit() 
+        my_cursor.execute(sql, new_teacher)
+        db.mydb.commit()
 
     await state.finish()
     # maybe should add some errors handle
@@ -128,6 +129,84 @@ async def insert_workmate(message: types.Message, state: FSMContext):
     else:
         await message.answer(nusername_telegram, " correctly inserted")
 
+
+def get_subjects():
+    my_cursor.execute("SELECT DISTINCT title FROM subjects;")
+    result = my_cursor.fetchall()
+
+    subjects = []
+    for subject in result:
+        subjects.append(subject[0])
+
+    return subjects
+
+
+@dp.message_handler(commands='create_queue')
+async def create_queue(message: types.Message):
+    try:
+        await Form.queue.set()
+
+        subjects = get_subjects()
+
+        if subjects:
+            str = "Select one lesson from list:\n"
+            for subject, i in zip(subjects, range(len(subjects))):
+                str += f"{i + 1}. {subject}\n"
+            str += "If wanted lesson not in list, add it by command /add_lesson"
+        else:
+            str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
+
+        await message.answer(str)
+
+    except Exception as e:
+        print(e)
+        await message.answer("Something wrong.")
+        return
+
+
+@dp.message_handler(state=Form.queue)
+async def create_queue(message: types.Message, state: FSMContext):
+    subjects = get_subjects()
+
+    data = message.values["text"]
+
+    #  Вибір предмету відбувається написання назвою або номером
+    try:  # Спроба конвертації користувацького вводу як інтове число. Якщо не виходить - сприймаємо як назву
+        if 0 < int(data) <= len(subjects):
+            subject = subjects[int(data) - 1]
+        else:
+            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await state.finish()
+
+    except ValueError:
+        subject = data
+
+    cheak_existing_queue = """SELECT subject_id
+                              FROM queues
+                              JOIN subjects sb
+                                  USING (subject_id)
+                              WHERE sb.title = %s;
+                           """
+    my_cursor.execute(cheak_existing_queue, (subject,))
+    existing = my_cursor.fetchone()
+
+    if existing:
+        await message.answer(f"Queue by lesson {subject} already exist")
+    else:
+        get_subject_id = """SELECT subject_id
+                            FROM subjects
+                            WHERE title = %s;"""
+        my_cursor.execute(get_subject_id, (subject,))
+        subject_id = my_cursor.fetchone()
+
+        if subject_id:
+            my_cursor.execute("INSERT INTO queues (id_queue, subject_id) VALUES(DEFAULT, %s)", subject_id)
+            db.mydb.commit()
+            await message.answer(f"Queue by lesson {subject} was created")
+        else:
+            await message.answer(f"Lesson {subject} not in list")
+
+    await state.finish()
 
 if __name__ == '__main__':
     try:
