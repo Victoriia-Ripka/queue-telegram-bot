@@ -19,6 +19,8 @@ my_cursor = db.mydb.cursor()
 class Form(StatesGroup):
     subject = State()
     teacher = State()
+    delete_subject = State()
+    delete_teacher = State()
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
@@ -82,7 +84,7 @@ async def add_subject(message: types.Message, state: FSMContext):
     # if isinstance(title, str) and isinstance(teacher_id, int):
     new_subject = (title, teacher_id)
     sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
-    my_cursor.execute(sql, new_subject)  
+    my_cursor.execute(sql, new_subject)
     db.mydb.commit() 
     await state.finish()
     
@@ -132,6 +134,77 @@ async def add_teacher(message: types.Message, state: FSMContext):
         await message.answer(f"{username_telegram} correctly inserted")
 
 
+@dp.message_handler(commands='delete_subject')
+async def delete_subject_start(message: types.Message):
+    try:
+        await Form.delete_subject.set()
+        await message.answer("""WRITE\nsubject's id""")
+
+    except Exception as e:
+        print(e)
+        await message.answer("Conversation Terminated✔")
+        return
+
+
+@dp.message_handler(state=Form.delete_subject)
+async def delete_subject(message: types.Message, state: FSMContext):
+    data = message.values["text"].split(" ")
+    
+    try:
+        id = data[0]
+    except ValueError:
+        await state.finish()
+        print(ValueError)
+        await message.answer("sorry, you input wrong data type. please, try again")
+        return
+
+    # if isinstance(title, str) and isinstance(teacher_id, int):
+    sql = "DELETE FROM Subjects WHERE subject_id = %s;"
+    my_cursor.execute(sql, (id,))  # Execute the query
+    db.mydb.commit() 
+    await state.finish()
+    
+    # maybe should add some errors handle
+    if my_cursor.rowcount < 1:
+        await message.answer("Something went wrong, please try again")
+    else:
+        await message.answer(f"Subject correctly deleted")
+
+
+@dp.message_handler(commands='delete_teacher')
+async def delete_teacher_start(message: types.Message):
+    try:
+        await Form.delete_teacher.set()
+        await message.answer("""WRITE\nteacher's id""")
+
+    except Exception as e:
+        print(e)
+        await message.answer("Conversation Terminated✔")
+        return
+
+
+@dp.message_handler(state=Form.delete_teacher)
+async def delete_teacher(message: types.Message, state: FSMContext):
+    data = message.values["text"].split(" ")
+    try:
+        id = data[0]
+    except ValueError:
+        await state.finish()
+        await message.answer("sorry, you input wrong data type. please, try again")
+        return
+
+    sql = "DELETE FROM Teachers WHERE id_teacher = %s;"
+    my_cursor.execute(sql, (id,))  # Execute the query
+    db.mydb.commit() 
+    await state.finish()
+    
+    # maybe should add some errors handle
+    if my_cursor.rowcount < 1:
+        await message.answer("Something went wrong, please try again")
+    else:
+        await message.answer(f"Teacher deleted")
+
+
 if __name__ == '__main__':
     try:
         print("Initializing Database...")
@@ -139,15 +212,13 @@ if __name__ == '__main__':
 
         sql_command = """CREATE DATABASE IF NOT EXISTS `queue-bot-kpi` DEFAULT CHARACTER SET utf8 ;"""
         my_cursor.execute(sql_command)
-        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
-            (
+        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`(
                 `subject_id` INT          NOT NULL AUTO_INCREMENT,
                 `title`      VARCHAR(100) NOT NULL,
                 `id_teacher` INT          NOT NULL,
                 PRIMARY KEY (`subject_id`),
                 UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
                 UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
-                UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
                 CONSTRAINT `fk_id_teacher`
                     FOREIGN KEY (`id_teacher`)
                     REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)

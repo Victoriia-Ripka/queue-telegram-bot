@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
     PRIMARY KEY (`subject_id`),
     UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
     UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
-    UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
     CONSTRAINT `fk_id_teacher`
 		FOREIGN KEY (`id_teacher`)
         REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
