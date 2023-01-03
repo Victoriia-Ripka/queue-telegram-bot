@@ -25,6 +25,8 @@ class Form(StatesGroup):
     clear_queue_st = State()
     delete_queue_st = State()
 
+    show_queue_st = State()
+
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
@@ -176,6 +178,7 @@ async def create_queue(message: types.Message):
 @dp.message_handler(state=Form.create_queue_st)
 async def create_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
+    subjects_with_queues = get_subjects_with_queues()
 
     data = message.values["text"]
 
@@ -191,7 +194,7 @@ async def create_queue(message: types.Message, state: FSMContext):
     except ValueError:
         subject = data
 
-    if subject in subjects:
+    if subject in subjects_with_queues:
         await message.answer(f"Queue by lesson {subject} already exist")
         await state.finish()
         return
@@ -297,6 +300,69 @@ async def delete_queue(message: types.Message, state: FSMContext):
         await message.answer(f"Черга на предмет {subject} була видалена")
     else:
         await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
+    await state.finish()
+    return
+
+
+@dp.message_handler(commands='show_needed_queue')
+async def show_needed_queue(message: types.Message):
+    await Form.show_queue_st.set()
+    subjects_with_queues = get_subjects_with_queues()
+
+    if subjects_with_queues:
+        str = "Виберіть предмет, на який шукаєте чергу:\n"
+        for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
+            str += f"{i + 1}. {subject}\n"
+        str += "\nЯкщо на ваш предмет ще немає черги, ви можете створити її командою /create_queue\n"
+    else:
+        str = "Ще не створено жодної черги.\n\n"
+        str += "Створити чергу: /create_queue\n"
+
+    str += "Отримати всі предмети: /get_subjects\n"
+    str += "Додати предмет: /add_subject"
+
+    await message.answer(str)
+
+
+@dp.message_handler(state=Form.show_queue_st)
+async def show_needed_queue(message: types.Message, state: FSMContext):
+    subjects_with_queues = get_subjects_with_queues()
+
+    data = message.values["text"]
+
+    try:
+        if 0 < int(data) <= len(subjects_with_queues):
+            subject = subjects_with_queues[int(data) - 1]
+        else:
+            await message.answer(f"Немає черги на предмет під номером {data}.\n"
+                                 f"Ви можете створити чергу (/create_queue) або додати предмет (/add_subject).")
+            await state.finish()
+            return
+
+    except ValueError:
+        subject = data
+
+    get_subject_id = """SELECT subject_id
+                        FROM subjects
+                        WHERE title = %s;"""
+    my_cursor.execute(get_subject_id, (subject,))
+    subject_id = int(my_cursor.fetchone()[0])
+
+    query = f"""SELECT position, username, firstname
+                FROM sign_ups
+                INNER JOIN students
+                ON sign_ups.telegram_user_id = students.telegram_user_id
+                AND id_queue = (SELECT id_queue FROM queues
+                                WHERE subject_id = {subject_id});"""
+    my_cursor.execute(query)
+    queue = my_cursor.fetchall()
+
+    queue_str = ''
+    for i, username, firstname in queue:
+        queue_str += f"{i}. {firstname} ({username})\n"
+
+    await message.answer(queue_str)
+
     await state.finish()
     return
 
