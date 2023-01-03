@@ -358,12 +358,79 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
     queue = my_cursor.fetchall()
 
     queue_str = ''
-    for i, username, firstname in queue:
-        queue_str += f"{i}. {firstname} ({username})\n"
+    if queue:
+        for i, username, firstname in queue:
+            queue_str += f"{i}. {firstname} ({username})\n"
+    else:
+        queue_str += 'Черга порожня.\n'
+    queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
 
     await message.answer(queue_str)
 
     await state.finish()
+    return
+
+
+@dp.message_handler(commands='all_teachers')
+async def all_teachers(message: types.Message):
+    query = """SELECT teachers.id_teacher, teachers.username_telegram, teachers.phone_number,
+               teachers.email, teachers.info, subjects.title
+               FROM teachers
+               LEFT OUTER JOIN subjects
+               ON teachers.id_teacher = subjects.id_teacher"""
+    my_cursor.execute(query)
+    teachers = my_cursor.fetchall()
+
+    all_teachers_str = 'Список усіх викладачів:\n'
+    if teachers:
+        for i, username, phone, email, info, subject in teachers:
+            all_teachers_str += f"\n{i}. ТГ: {username}\nНомер телефону: {phone}\n" \
+                                f"Ел. пошта: {email}\nІнформація: {info}\nВикладає: {subject}\n"
+    else:
+        all_teachers_str += 'Викладачів ще немає.\n'
+    all_teachers_str += '\nДодати викладача: /add_teacher'
+
+    await message.answer(all_teachers_str)
+    return
+
+
+@dp.message_handler(commands='all_subjects')
+async def all_subjects(message: types.Message):
+    query = """SELECT subjects.subject_id, subjects.title, teachers.username_telegram
+               FROM subjects
+               LEFT OUTER JOIN teachers
+               ON subjects.id_teacher = teachers.id_teacher;"""
+    my_cursor.execute(query)
+    subjects = my_cursor.fetchall()
+
+    all_subjects_str = 'Список усіх предметів:\n'
+    if subjects:
+        for i, title, teacher in subjects:
+            all_subjects_str += f"\n{i}. {title}\nВикладає: {teacher}\n"
+    else:
+        all_subjects_str += 'Предметів ще немає.\n'
+    all_subjects_str += '\nДодати предмет: /add_subject'
+
+    await message.answer(all_subjects_str)
+    return
+
+
+@dp.message_handler(commands='all_students')
+async def all_students(message: types.Message):
+    query = """SELECT username, firstname FROM students;"""
+    my_cursor.execute(query)
+    students = my_cursor.fetchall()
+
+    all_students_str = 'Список усіх зареєстрованих студентів:\n\n'
+    if students:
+        i = 1
+        for username, firstname in students:
+            all_students_str += f"{i}. {firstname} ({username})\n"
+    else:
+        all_students_str += 'Зареєстрованих студентів ще немає.\n'
+    all_students_str += '\nДодати студента: /add_student'
+
+    await message.answer(all_students_str)
     return
 
 
