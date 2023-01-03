@@ -178,17 +178,9 @@ async def create_queue(message: types.Message, state: FSMContext):
     except ValueError:
         subject = data
 
-    cheak_existing_queue = """SELECT subject_id
-                              FROM queues
-                              JOIN subjects sb
-                                  USING (subject_id)
-                              WHERE sb.title = %s;
-                           """
-    my_cursor.execute(cheak_existing_queue, (subject,))
-    existing = my_cursor.fetchone()
-
-    if existing:
+    if subject in subjects:
         await message.answer(f"Queue by lesson {subject} already exist")
+        await state.finish()
         return
     else:
         get_subject_id = """SELECT subject_id
@@ -209,7 +201,7 @@ async def create_queue(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(commands='clear_queue')
-async def create_queue(message: types.Message):
+async def clear_queue(message: types.Message):
     await Form.clear_queue_st.set()
     subjects = get_subjects()
     if subjects:
@@ -220,7 +212,7 @@ async def create_queue(message: types.Message):
 
 
 @dp.message_handler(state=Form.clear_queue_st)
-async def create_queue(message: types.Message, state: FSMContext):
+async def clear_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
 
     data = message.values["text"]
@@ -248,6 +240,48 @@ async def create_queue(message: types.Message, state: FSMContext):
         my_cursor.execute(delete_users, (subject,))
         db.mydb.commit()
         await message.answer(f"Черга на предмет {subject} була очищена")
+    else:
+        await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
+    await state.finish()
+    return
+
+
+@dp.message_handler(commands='delete_queue')
+async def delete_queue(message: types.Message):
+    await Form.delete_queue_st.set()
+    subjects = get_subjects()
+    if subjects:
+        str = "Select one lesson from list:\n"
+        for subject, i in zip(subjects, range(len(subjects))):
+            str += f"{i + 1}. {subject}\n"
+        str += "If wanted lesson not in list, add it by command /add_lesson"
+    else:
+        str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
+    await message.answer(str)
+
+
+@dp.message_handler(state=Form.delete_queue_st)
+async def delete_queue(message: types.Message, state: FSMContext):
+    subjects = get_subjects()
+    data = message.values["text"]
+    try:
+        if 0 < int(data) <= len(subjects):
+            subject = subjects[int(data) - 1]
+        else:
+            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await state.finish()
+            return
+    except ValueError:
+        subject = data
+    if subject in get_subjects():
+        delete_users = """DELETE queues FROM queues
+                          JOIN subjects sb
+                                 USING(subject_id)
+                          WHERE sb.title = %s;
+                          """
+        my_cursor.execute(delete_users, (subject,))
+        db.mydb.commit()
+        await message.answer(f"Черга на предмет {subject} була видалена")
     else:
         await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
     await state.finish()
@@ -291,25 +325,24 @@ if __name__ == '__main__':
     ON DELETE CASCADE
     ON UPDATE CASCADE);"""
         my_cursor.execute(sql_command)
-        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups` (
-  `id_sign_up` INT NOT NULL AUTO_INCREMENT,
-  `id_queue` INT NOT NULL,
-  `telegram_user_id` INT NOT NULL,
-  `position` INT NOT NULL,
-  PRIMARY KEY (`id_sign_up`),
-  UNIQUE INDEX `position_UNIQUE` (`position` ASC) VISIBLE,
-  UNIQUE INDEX `id_queue_UNIQUE` (`id_queue` ASC) VISIBLE,
-  UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
-  CONSTRAINT `id_queue fk from Sign_ups to Queue`
-    FOREIGN KEY (`id_queue`)
-    REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
+        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
+(
+    `id_sign_up`       INT NOT NULL AUTO_INCREMENT,
+    `id_queue`         INT NOT NULL,
+    `telegram_user_id` INT NOT NULL,
+    `position`         INT NOT NULL,
+    PRIMARY KEY (`id_sign_up`),
+    UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
+    CONSTRAINT `id_queue fk from Sign_ups to Queue`
+        FOREIGN KEY (`id_queue`)
+            REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `telegram_user_id fk from Sign_ups to Students`
-    FOREIGN KEY (`telegram_user_id`)
-    REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION);"""
+        FOREIGN KEY (`telegram_user_id`)
+            REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)
+            ON DELETE NO ACTION
+            ON UPDATE NO ACTION);"""
         my_cursor.execute(sql_command)
         sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers` (
   `id_teacher` INT NOT NULL AUTO_INCREMENT,
