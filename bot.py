@@ -56,7 +56,7 @@ async def end(message: types.Message):
 async def add_subject_start(message: types.Message):
     try:
         await Form.subject.set()
-        await message.answer("""WRITE\nsubject title""")
+        await message.answer("""WRITE\nsubject title and id_teacher""")
 
     except Exception as e:
         print(e)
@@ -67,26 +67,30 @@ async def add_subject_start(message: types.Message):
 @dp.message_handler(state=Form.subject)
 async def add_subject(message: types.Message, state: FSMContext):
     data = message.values["text"].split(" ")
+    
     try:
-        title = data[0].title()
+        title = data[0]
+        print(title)
         teacher_id = data[1]
+        print(teacher_id)
     except ValueError:
         await state.finish()
+        print(ValueError)
         await message.answer("sorry, you input wrong data type. please, try again")
         return
 
-    if isinstance(title, str) and isinstance(teacher_id, int):
-        new_subject = (title, teacher_id)
-        sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
-        my_cursor.execute(sql, new_subject)  
-        db.mydb.commit() 
-
+    # if isinstance(title, str) and isinstance(teacher_id, int):
+    new_subject = (title, teacher_id)
+    sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
+    my_cursor.execute(sql, new_subject)  
+    db.mydb.commit() 
     await state.finish()
+    
     # maybe should add some errors handle
     if my_cursor.rowcount < 1:
         await message.answer("Something went wrong, please try again")
     else:
-        await message.answer(title, " correctly inserted")
+        await message.answer(f"{title} correctly inserted")
 
 
 @dp.message_handler(commands='add_teacher')
@@ -117,17 +121,17 @@ async def add_teacher(message: types.Message, state: FSMContext):
 
     new_teacher = (username_telegram, phone_number, email, info)
     sql = "INSERT INTO Teachers (id_teacher, username_telegram, phone_number, email, info) VALUES (NULL, %s, %s, %s, %s);"
-    my_cursor.execute(sql, (username_telegram, phone_number, email, info))  
+    my_cursor.execute(sql, new_teacher)  
     db.mydb.commit() 
     await state.finish()
-
+    
     # maybe should add some errors handle
     if my_cursor.rowcount < 1:
         await message.answer("Something went wrong, please try again")
     else:
-        await message.answer(username_telegram, " correctly inserted")
+        await message.answer(f"{username_telegram} correctly inserted")
 
-# mydb
+
 if __name__ == '__main__':
     try:
         print("Initializing Database...")
@@ -135,14 +139,20 @@ if __name__ == '__main__':
 
         sql_command = """CREATE DATABASE IF NOT EXISTS `queue-bot-kpi` DEFAULT CHARACTER SET utf8 ;"""
         my_cursor.execute(sql_command)
-        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects` (
-        `subject_id` INT NOT NULL AUTO_INCREMENT,
-        `title` VARCHAR(100) NOT NULL,
-        `id_teacher` INT NOT NULL,
-        PRIMARY KEY (`subject_id`),
-        UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
-        UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
-        UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE);"""
+        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
+            (
+                `subject_id` INT          NOT NULL AUTO_INCREMENT,
+                `title`      VARCHAR(100) NOT NULL,
+                `id_teacher` INT          NOT NULL,
+                PRIMARY KEY (`subject_id`),
+                UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
+                UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
+                UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
+                CONSTRAINT `fk_id_teacher`
+                    FOREIGN KEY (`id_teacher`)
+                    REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
+                    ON DELETE NO ACTION
+                    ON UPDATE CASCADE);"""
         my_cursor.execute(sql_command)
         sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students` (
         `telegram_user_id` INT NOT NULL,
@@ -184,21 +194,18 @@ if __name__ == '__main__':
             ON DELETE NO ACTION
             ON UPDATE NO ACTION);"""
         my_cursor.execute(sql_command)
-        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers` (
-        `id_teacher` INT NOT NULL AUTO_INCREMENT,
-        `username_telegram` VARCHAR(45) NULL,
-        `phone_number` CHAR(13) NULL,
-        `email` VARCHAR(60) NULL,
-        `info` TEXT(1000) NULL,
-        PRIMARY KEY (`id_teacher`),
-        UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
-        UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
-        UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE,
-        CONSTRAINT `id_teacher fk from Teachers to Subjects`
-            FOREIGN KEY (`id_teacher`)
-            REFERENCES `queue-bot-kpi`.`Subjects` (`id_teacher`)
-            ON DELETE NO ACTION
-            ON UPDATE CASCADE);"""
+        sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
+(
+    `id_teacher`        INT         NOT NULL AUTO_INCREMENT,
+    `username_telegram` VARCHAR(45) NULL,
+    `phone_number`      CHAR(13)    NULL,
+    `email`             VARCHAR(60) NULL,
+    `info`              TEXT(1000)  NULL,
+    PRIMARY KEY (`id_teacher`),
+    UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
+    UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
+    UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE
+    );"""
         my_cursor.execute(sql_command)
         print("All tables are ready")
         print("Bot Started")
