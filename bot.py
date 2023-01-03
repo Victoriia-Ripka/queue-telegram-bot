@@ -16,10 +16,15 @@ logging.basicConfig(level=logging.INFO)
 
 my_cursor = db.mydb.cursor()
 
+
 class Form(StatesGroup):
     subject = State()
     teacher = State()
-    queue = State()
+
+    create_queue_st = State()
+    clear_queue_st = State()
+    delete_queue_st = State()
+
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
@@ -79,8 +84,8 @@ async def insert_workmate(message: types.Message, state: FSMContext):
     if isinstance(title, str) and isinstance(teacher_id, int):
         new_subject = (title, teacher_id)
         sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
-        my_cursor.execute(sql, new_subject)  
-        db.mydb.commit() 
+        my_cursor.execute(sql, new_subject)
+        db.mydb.commit()
 
     await state.finish()
     # maybe should add some errors handle
@@ -108,9 +113,9 @@ async def insert_workmate(message: types.Message, state: FSMContext):
     try:
         nusername_telegram = data[0].title()
         # how to set NULL to fields
-        phone_number = data[1] #may contain nothing
-        email = data[2] #may contain nothing
-        info = data[3] #may contain nothing
+        phone_number = data[1]  # may contain nothing
+        email = data[2]  # may contain nothing
+        info = data[3]  # may contain nothing
     except ValueError:
         await state.finish()
         await message.answer("sorry, you input wrong data type. please, try again")
@@ -143,28 +148,19 @@ def get_subjects():
 
 @dp.message_handler(commands='create_queue')
 async def create_queue(message: types.Message):
-    try:
-        await Form.queue.set()
-
-        subjects = get_subjects()
-
-        if subjects:
-            str = "Select one lesson from list:\n"
-            for subject, i in zip(subjects, range(len(subjects))):
-                str += f"{i + 1}. {subject}\n"
-            str += "If wanted lesson not in list, add it by command /add_lesson"
-        else:
-            str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
-
-        await message.answer(str)
-
-    except Exception as e:
-        print(e)
-        await message.answer("Something wrong.")
-        return
+    await Form.create_queue_st.set()
+    subjects = get_subjects()
+    if subjects:
+        str = "Select one lesson from list:\n"
+        for subject, i in zip(subjects, range(len(subjects))):
+            str += f"{i + 1}. {subject}\n"
+        str += "If wanted lesson not in list, add it by command /add_lesson"
+    else:
+        str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
+    await message.answer(str)
 
 
-@dp.message_handler(state=Form.queue)
+@dp.message_handler(state=Form.create_queue_st)
 async def create_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
 
@@ -177,6 +173,7 @@ async def create_queue(message: types.Message, state: FSMContext):
         else:
             await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
             await state.finish()
+            return
 
     except ValueError:
         subject = data
@@ -192,6 +189,7 @@ async def create_queue(message: types.Message, state: FSMContext):
 
     if existing:
         await message.answer(f"Queue by lesson {subject} already exist")
+        return
     else:
         get_subject_id = """SELECT subject_id
                             FROM subjects
@@ -207,6 +205,54 @@ async def create_queue(message: types.Message, state: FSMContext):
             await message.answer(f"Lesson {subject} not in list")
 
     await state.finish()
+    return
+
+
+@dp.message_handler(commands='clear_queue')
+async def create_queue(message: types.Message):
+    await Form.clear_queue_st.set()
+    subjects = get_subjects()
+    if subjects:
+        str = "Чергу на який предмет ви хочетете очистити?:\n"
+        for subject, i in zip(subjects, range(len(subjects))):
+            str += f"{i + 1}. {subject}\n"
+    await message.answer(str)
+
+
+@dp.message_handler(state=Form.clear_queue_st)
+async def create_queue(message: types.Message, state: FSMContext):
+    subjects = get_subjects()
+
+    data = message.values["text"]
+
+    try:
+        if 0 < int(data) <= len(subjects):
+            subject = subjects[int(data) - 1]
+        else:
+            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await state.finish()
+            return
+
+    except ValueError:
+        subject = data
+
+    if subject in get_subjects():
+        delete_users = """DELETE sign_ups FROM sign_ups
+                          JOIN queues
+                                 USING(id_queue)
+                          JOIN subjects sb
+                                 USING(subject_id)
+                          WHERE sb.title = %s;
+                          """
+
+        my_cursor.execute(delete_users, (subject,))
+        db.mydb.commit()
+        await message.answer(f"Черга на предмет {subject} була очищена")
+    else:
+        await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
+    await state.finish()
+    return
+
 
 if __name__ == '__main__':
     try:
@@ -287,4 +333,3 @@ if __name__ == '__main__':
 
     except Exception as error:
         print('Cause: {}'.format(error))
-
