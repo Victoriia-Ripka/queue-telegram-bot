@@ -170,47 +170,43 @@ async def create_queue(message: types.Message, state: FSMContext):
 
     data = message.values["text"]
 
-    try:
+    #  Вибір предмету відбувається написання назвою або номером
+    try:  # Спроба конвертації користувацького вводу як інтове число. Якщо не виходить - сприймаємо як назву
         if 0 < int(data) <= len(subjects):
-            await message.answer(f"Queue by lesson {subjects[int(data) - 1]} was created")
-            # cheaking for existing
-            # adding
+            subject = subjects[int(data) - 1]
         else:
             await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await state.finish()
 
     except ValueError:
+        subject = data
 
-        if data in subjects:
-            await message.answer(f"Queue by lesson {data} was created")
-            # cheaking for existing
-            # adding
-        else:
-            await message.answer(f"{data} is unknown subject. You can add lesson by /add_lesson")
+    cheak_existing_queue = """SELECT subject_id
+                              FROM queues
+                              JOIN subjects sb
+                                  USING (subject_id)
+                              WHERE sb.title = %s;
+                           """
+    my_cursor.execute(cheak_existing_queue, (subject,))
+    existing = my_cursor.fetchone()
 
-    await state.finish()
-    """
-    try:
-        title = data[0].title()
-        teacher_id = data[1]
-    except ValueError:
-        await state.finish()
-        await message.answer("sorry, you input wrong data type. please, try again")
-        return
-
-    if isinstance(title, str) and isinstance(teacher_id, int):
-        new_subject = (title, teacher_id)
-        sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
-        my_cursor.execute(sql, new_subject)  
-        db.mydb.commit() 
-
-    await state.finish()
-    # maybe should add some errors handle
-    if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+    if existing:
+        await message.answer(f"Queue by lesson {subject} already exist")
     else:
-        await message.answer(title, " correctly inserted")
-    """
+        get_subject_id = """SELECT subject_id
+                            FROM subjects
+                            WHERE title = %s;"""
+        my_cursor.execute(get_subject_id, (subject,))
+        subject_id = my_cursor.fetchone()
 
+        if subject_id:
+            my_cursor.execute("INSERT INTO queues (id_queue, subject_id) VALUES(DEFAULT, %s)", subject_id)
+            db.mydb.commit()
+            await message.answer(f"Queue by lesson {subject} was created")
+        else:
+            await message.answer(f"Lesson {subject} not in list")
+
+    await state.finish()
 
 if __name__ == '__main__':
     try:
