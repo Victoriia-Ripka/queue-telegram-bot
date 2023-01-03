@@ -23,6 +23,7 @@ USE `queue-bot-kpi`;
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Subjects`;
 
+
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
 (
     `subject_id` INT          NOT NULL AUTO_INCREMENT,
@@ -31,7 +32,12 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
     PRIMARY KEY (`subject_id`),
     UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
     UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
-    UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE
+    UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
+    CONSTRAINT `fk_id_teacher`
+		FOREIGN KEY (`id_teacher`)
+        REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
+		ON DELETE NO ACTION
+		ON UPDATE CASCADE
 )
     ENGINE = InnoDB;
 
@@ -58,6 +64,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Queues`;
 
+
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
 (
     `id_queue`   INT NOT NULL AUTO_INCREMENT,
@@ -78,6 +85,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
 -- Table `queue-bot-kpi`.`Sign_ups`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups`;
+
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 (
@@ -108,6 +116,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers`;
 
+
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
 (
     `id_teacher`        INT         NOT NULL AUTO_INCREMENT,
@@ -118,12 +127,8 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
     PRIMARY KEY (`id_teacher`),
     UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
     UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
-    UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE,
-    CONSTRAINT `id_teacher fk from Teachers to Subjects`
-    FOREIGN KEY (`id_teacher`)
-        REFERENCES `queue-bot-kpi`.`Subjects` (`id_teacher`)
-    ON DELETE NO ACTION
-    ON UPDATE CASCADE)
+    UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE
+    )
 ENGINE = InnoDB;
 
 
