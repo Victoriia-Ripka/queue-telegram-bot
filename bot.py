@@ -107,9 +107,9 @@ async def insert_workmate(message: types.Message, state: FSMContext):
     try:
         nusername_telegram = data[0].title()
         # how to set NULL to fields
-        phone_number = data[1] #may contain nothing
-        email = data[2] #may contain nothing
-        info = data[3] #may contain nothing
+        phone_number = data[1]  # may contain nothing
+        email = data[2]  # may contain nothing
+        info = data[3]  # may contain nothing
     except ValueError:
         await state.finish()
         await message.answer("sorry, you input wrong data type. please, try again")
