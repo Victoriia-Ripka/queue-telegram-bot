@@ -19,6 +19,7 @@ my_cursor = db.mydb.cursor()
 class Form(StatesGroup):
     subject = State()
     teacher = State()
+    queue = State()
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
@@ -118,8 +119,8 @@ async def insert_workmate(message: types.Message, state: FSMContext):
     if isinstance(nusername_telegram, str):
         new_teacher = (nusername_telegram, phone_number, email, info)
         sql = "INSERT INTO Teachers (id_teacher, username_telegram, phone_number, email, info) VALUES (NULL, %s, %s, %s, %s);"
-        my_cursor.execute(sql, new_teacher)  
-        db.mydb.commit() 
+        my_cursor.execute(sql, new_teacher)
+        db.mydb.commit()
 
     await state.finish()
     # maybe should add some errors handle
@@ -127,6 +128,88 @@ async def insert_workmate(message: types.Message, state: FSMContext):
         await message.answer("Something went wrong, please try again")
     else:
         await message.answer(nusername_telegram, " correctly inserted")
+
+
+def get_subjects():
+    my_cursor.execute("SELECT DISTINCT title FROM subjects;")
+    result = my_cursor.fetchall()
+
+    subjects = []
+    for subject in result:
+        subjects.append(subject[0])
+
+    return subjects
+
+
+@dp.message_handler(commands='create_queue')
+async def create_queue(message: types.Message):
+    try:
+        await Form.queue.set()
+
+        subjects = get_subjects()
+
+        if subjects:
+            str = "Select one lesson from list:\n"
+            for subject, i in zip(subjects, range(len(subjects))):
+                str += f"{i + 1}. {subject}\n"
+            str += "If wanted lesson not in list, add it by command /add_lesson"
+        else:
+            str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
+
+        await message.answer(str)
+
+    except Exception as e:
+        print(e)
+        await message.answer("Something wrong.")
+        return
+
+
+@dp.message_handler(state=Form.queue)
+async def create_queue(message: types.Message, state: FSMContext):
+    subjects = get_subjects()
+
+    data = message.values["text"]
+
+    try:
+        if 0 < int(data) <= len(subjects):
+            await message.answer(f"Queue by lesson {subjects[int(data) - 1]} was created")
+            # cheaking for existing
+            # adding
+        else:
+            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+
+    except ValueError:
+
+        if data in subjects:
+            await message.answer(f"Queue by lesson {data} was created")
+            # cheaking for existing
+            # adding
+        else:
+            await message.answer(f"{data} is unknown subject. You can add lesson by /add_lesson")
+
+    await state.finish()
+    """
+    try:
+        title = data[0].title()
+        teacher_id = data[1]
+    except ValueError:
+        await state.finish()
+        await message.answer("sorry, you input wrong data type. please, try again")
+        return
+
+    if isinstance(title, str) and isinstance(teacher_id, int):
+        new_subject = (title, teacher_id)
+        sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
+        my_cursor.execute(sql, new_subject)  
+        db.mydb.commit() 
+
+    await state.finish()
+    # maybe should add some errors handle
+    if my_cursor.rowcount < 1:
+        await message.answer("Something went wrong, please try again")
+    else:
+        await message.answer(title, " correctly inserted")
+    """
 
 
 if __name__ == '__main__':
