@@ -487,15 +487,13 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
             await state.finish()
             return
 
-    subject_id = get_subject_id(subject)
-    queue = fetch_queue(subject_id)
-    queue_str = queue_to_str(queue)
+    queue_str = queue_to_str(fetch_queue(get_subject_id(subject)))
 
     await message.answer(queue_str)
 
     await state.finish()
 
-    return queue
+    return
 
 
 @dp.message_handler(commands='start_queue')
@@ -534,9 +532,7 @@ async def start_queue(message: types.Message, state: FSMContext):
             await state.finish()
             return
 
-    subject_id = get_subject_id(subject)
-    queue = fetch_queue(subject_id)
-    queue_str = active_queue_to_str(queue, 1)
+    queue_str = active_queue_to_str(fetch_queue(get_subject_id(subject)), 1)
 
     queue_str += '\n\nЧерга активна'
 
