@@ -147,14 +147,15 @@ async def add_teacher(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_subject')
 async def delete_subject_start(message: types.Message):
-    try:
-        await Form.delete_subject.set()
-        await message.answer("""WRITE\nsubject's id""")
-
-    except Exception as e:
-        print(e)
-        await message.answer("Conversation Terminated✔")
-        return
+    await Form.delete_subject.set()
+    subjects = get_subjects_with_id()
+    print(subjects)
+    str = "Список предметів:\n"
+    for subject, i in zip(subjects, range(len(subjects))):
+        str += f"{subject[0]}: {subject[1]}\n"
+    str += "Напишіть id предмета, що потрібно видалити"
+    await message.answer(str)
+    return 
 
 
 @dp.message_handler(state=Form.delete_subject)
@@ -165,8 +166,7 @@ async def delete_subject(message: types.Message, state: FSMContext):
         id = data[0]
     except ValueError:
         await state.finish()
-        print(ValueError)
-        await message.answer("sorry, you input wrong data type. please, try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /delete_subject 1")
         return
 
     # if isinstance(title, str) and isinstance(teacher_id, int):
@@ -177,21 +177,21 @@ async def delete_subject(message: types.Message, state: FSMContext):
     
     # maybe should add some errors handle
     if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /delete_subject 2")
     else:
-        await message.answer(f"Subject correctly deleted")
+        await message.answer(f"Предмет видален")
 
 
 @dp.message_handler(commands='delete_teacher')
 async def delete_teacher_start(message: types.Message):
-    try:
-        await Form.delete_teacher.set()
-        await message.answer("""WRITE\nteacher's id""")
-
-    except Exception as e:
-        print(e)
-        await message.answer("Conversation Terminated✔")
-        return
+    await Form.delete_teacher.set()
+    teachers = get_teachers_with_id()
+    str = "Список викладачів:\n"
+    for teacher, i in zip(teachers, range(len(teachers))):
+        str += f"{teacher[0]}: {teacher[1]}\n"
+    str += "Напишіть id викладача, що потрібно видалити"
+    await message.answer(str)
+    return     
 
 
 @dp.message_handler(state=Form.delete_teacher)
@@ -201,7 +201,7 @@ async def delete_teacher(message: types.Message, state: FSMContext):
         id = data[0]
     except ValueError:
         await state.finish()
-        await message.answer("sorry, you input wrong data type. please, try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /delete_teacher 1")
         return
 
     sql = "DELETE FROM Teachers WHERE id_teacher = %s;"
@@ -211,9 +211,9 @@ async def delete_teacher(message: types.Message, state: FSMContext):
     
     # maybe should add some errors handle
     if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /delete_teacher 2")
     else:
-        await message.answer(f"Teacher deleted")
+        await message.answer(f"Вчитель видален")
 
 
 def get_teachers():
@@ -226,6 +226,16 @@ def get_teachers():
 
     return teachers
 
+def get_teachers_with_id():
+    my_cursor.execute("SELECT DISTINCT id_teacher, info FROM teachers;")
+    result = my_cursor.fetchall()
+
+    teachers = []
+    for teacher in result:
+        teachers.append((teacher[0], teacher[1]))
+
+    return teachers
+
 def get_subjects():
     my_cursor.execute("SELECT DISTINCT title FROM subjects;")
     result = my_cursor.fetchall()
@@ -235,6 +245,17 @@ def get_subjects():
         subjects.append(subject[0])
 
     return subjects
+
+def get_subjects_with_id():
+    my_cursor.execute("SELECT DISTINCT subject_id, title FROM subjects;")
+    result = my_cursor.fetchall()
+
+    subjects = []
+    for subject in result:
+        subjects.append((subject[0], subject[1]))
+
+    return subjects
+
 
 
 def get_subjects_with_queues():
