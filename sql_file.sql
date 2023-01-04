@@ -11,7 +11,7 @@ SET @OLD_SQL_MODE = @@SQL_MODE, SQL_MODE =
 -- -----------------------------------------------------
 -- Schema queue-bot-kpi
 -- -----------------------------------------------------
-
+DROP SCHEMA IF EXISTS `queue-bot-kpi`;
 -- -----------------------------------------------------
 -- Schema queue-bot-kpi
 -- -----------------------------------------------------
@@ -22,6 +22,7 @@ USE `queue-bot-kpi`;
 -- Table `queue-bot-kpi`.`Subjects`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Subjects`;
+
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
 (
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Queues`;
 
+
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
 (
     `id_queue`   INT NOT NULL AUTO_INCREMENT,
@@ -82,6 +84,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
 -- Table `queue-bot-kpi`.`Sign_ups`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups`;
+
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 (
@@ -111,6 +114,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 -- Table `queue-bot-kpi`.`Teachers`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers`;
+
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
 (
