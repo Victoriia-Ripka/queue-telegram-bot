@@ -243,12 +243,12 @@ async def create_queue(message: types.Message):
     await Form.create_queue_st.set()
     subjects = get_subjects()
     if subjects:
-        str = "Select one lesson from list:\n"
+        str = "Список предметів:\n"
         for subject, i in zip(subjects, range(len(subjects))):
             str += f"{i + 1}. {subject}\n"
-        str += "If wanted lesson not in list, add it by command /add_lesson"
+        str += "Ви можете додати предмет командою /add_lesson"
     else:
-        str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
+        str = "Список предметів пустий. Ви можете додати предмет командою /add_lesson"
     await message.answer(str)
 
 
@@ -264,7 +264,7 @@ async def create_queue(message: types.Message, state: FSMContext):
         if 0 < int(data) <= len(subjects):
             subject = subjects[int(data) - 1]
         else:
-            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await message.answer(f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_lesson")
             await state.finish()
             return
 
@@ -272,7 +272,7 @@ async def create_queue(message: types.Message, state: FSMContext):
         subject = data
 
     if subject in subjects_with_queues:
-        await message.answer(f"Queue by lesson {subject} already exist")
+        await message.answer(f"Черга на {subject} вже існує")
         await state.finish()
         return
     else:
@@ -285,9 +285,10 @@ async def create_queue(message: types.Message, state: FSMContext):
         if subject_id:
             my_cursor.execute("INSERT INTO queues (id_queue, subject_id) VALUES(DEFAULT, %s)", subject_id)
             db.mydb.commit()
-            await message.answer(f"Queue by lesson {subject} was created")
+            await message.answer(f"Чергу на предмет {subject} створено")
         else:
-            await message.answer(f"Lesson {subject} not in list")
+            await message.answer(f"Предмета {subject} немає у списку."
+                                 f" Ви можете додати новий предмет командою /add_lesson")
 
     await state.finish()
     return
@@ -298,15 +299,18 @@ async def clear_queue(message: types.Message):
     await Form.clear_queue_st.set()
     subjects = get_subjects()
     if subjects:
-        str = "Чергу на який предмет ви хочетете очистити?:\n"
+        str = "Чергу на який предмет Ви хочетете очистити?:\n"
         for subject, i in zip(subjects, range(len(subjects))):
             str += f"{i + 1}. {subject}\n"
+    else:
+        str = "Список предметів пустий. Ви можете додати предмет командою /add_lesson"
     await message.answer(str)
 
 
 @dp.message_handler(state=Form.clear_queue_st)
 async def clear_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
+    subjects_with_queues = get_subjects_with_queues()
 
     data = message.values["text"]
 
@@ -314,27 +318,32 @@ async def clear_queue(message: types.Message, state: FSMContext):
         if 0 < int(data) <= len(subjects):
             subject = subjects[int(data) - 1]
         else:
-            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await message.answer(f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_lesson")
             await state.finish()
             return
 
     except ValueError:
         subject = data
 
-    if subject in get_subjects():
-        delete_users = """DELETE sign_ups FROM sign_ups
-                          JOIN queues
-                                 USING(id_queue)
-                          JOIN subjects sb
-                                 USING(subject_id)
-                          WHERE sb.title = %s;
-                          """
+    if subject in subjects:
+        if subject in subjects_with_queues:
+            delete_users = """DELETE sign_ups FROM sign_ups
+                              JOIN queues
+                                     USING(id_queue)
+                              JOIN subjects sb
+                                     USING(subject_id)
+                              WHERE sb.title = %s;
+                              """
 
-        my_cursor.execute(delete_users, (subject,))
-        db.mydb.commit()
-        await message.answer(f"Черга на предмет {subject} була очищена")
+            my_cursor.execute(delete_users, (subject,))
+            db.mydb.commit()
+            await message.answer(f"Черга на предмет {subject} була очищена")
+        else:
+            await message.answer(f"Черга на предмет {subject} ще не створення."
+                                 f" Ви можете сторити її командую /create_queue")
     else:
-        await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
+        await message.answer(f"Предмета {subject} немає у списку."
+                             f" Ви можете додати новий предмет командою /add_lesson")
     await state.finish()
     return
 
@@ -344,39 +353,46 @@ async def delete_queue(message: types.Message):
     await Form.delete_queue_st.set()
     subjects = get_subjects()
     if subjects:
-        str = "Select one lesson from list:\n"
+        str = "Список предметів:\n"
         for subject, i in zip(subjects, range(len(subjects))):
             str += f"{i + 1}. {subject}\n"
-        str += "If wanted lesson not in list, add it by command /add_lesson"
+        str += "Ви можете додати предмет командою /add_lesson"
     else:
-        str = "Oups! Lesson list is empty. You can add lesson by /add_lesson"
+        str = "Список предметів пустий. Ви можете додати предмет командою /add_lesson"
     await message.answer(str)
 
 
 @dp.message_handler(state=Form.delete_queue_st)
 async def delete_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
+    subjects_with_queues = get_subjects_with_queues()
+
     data = message.values["text"]
+
     try:
         if 0 < int(data) <= len(subjects):
             subject = subjects[int(data) - 1]
         else:
-            await message.answer(f"Subject by number {data} is unknown. You can add lesson by /add_lesson")
+            await message.answer(f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_lesson")
             await state.finish()
             return
     except ValueError:
         subject = data
-    if subject in get_subjects():
-        delete_users = """DELETE queues FROM queues
-                          JOIN subjects sb
-                                 USING(subject_id)
-                          WHERE sb.title = %s;
-                          """
-        my_cursor.execute(delete_users, (subject,))
-        db.mydb.commit()
-        await message.answer(f"Черга на предмет {subject} була видалена")
+    if subject in subjects:
+        if subject in subjects_with_queues:
+            delete_users = """DELETE queues FROM queues
+                              JOIN subjects sb
+                                     USING(subject_id)
+                              WHERE sb.title = %s;
+                              """
+            my_cursor.execute(delete_users, (subject,))
+            db.mydb.commit()
+            await message.answer(f"Черга на предмет {subject} була видалена")
+        else:
+            await message.answer(f"Черга на предмет {subject} ще не створення."
+                                 f" Ви можете сторити її командую /create_queue")
     else:
-        await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
+        await message.answer(f"Предмет за {subject} невідомий. Ви можете додати предмет командою /add_lesson")
     await state.finish()
     return
 
