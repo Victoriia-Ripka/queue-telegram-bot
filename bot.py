@@ -347,7 +347,6 @@ async def clear_queue(message: types.Message, state: FSMContext):
     await state.finish()
     return
 
-
 @dp.message_handler(commands='delete_queue')
 async def delete_queue(message: types.Message):
     await Form.delete_queue_st.set()
