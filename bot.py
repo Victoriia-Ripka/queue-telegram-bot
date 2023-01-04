@@ -9,7 +9,7 @@ import db
 
 API_TOKEN = '5626939602:AAHRuLoS6EaWY1OfVHdIn0tBYeLzC6ZZY1k'
 
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=API_TOKEN, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +28,7 @@ class Form(StatesGroup):
     delete_queue_st = State()
 
     show_queue_st = State()
+    start_queue_st = State()
 
 
 @dp.message_handler(commands="start")
@@ -417,30 +418,7 @@ async def show_needed_queue(message: types.Message):
     await message.answer(str)
 
 
-@dp.message_handler(state=Form.show_queue_st)
-async def show_needed_queue(message: types.Message, state: FSMContext):
-    subjects_with_queues = get_subjects_with_queues()
-
-    data = message.values["text"]
-
-    try:
-        if 0 < int(data) <= len(subjects_with_queues):
-            subject = subjects_with_queues[int(data) - 1]
-        else:
-            await message.answer(f"Немає черги на предмет під номером {data}.\n"
-                                 f"Ви можете створити чергу (/create_queue) або додати предмет (/add_subject).")
-            await state.finish()
-            return
-
-    except ValueError:
-        subject = data
-
-    get_subject_id = """SELECT subject_id
-                        FROM subjects
-                        WHERE title = %s;"""
-    my_cursor.execute(get_subject_id, (subject,))
-    subject_id = int(my_cursor.fetchone()[0])
-
+def fetch_queue(subject_id):
     query = f"""SELECT position, username, firstname
                 FROM sign_ups
                 INNER JOIN students
@@ -450,6 +428,21 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
     my_cursor.execute(query)
     queue = my_cursor.fetchall()
 
+    return queue
+
+
+def get_subject_id(subject):
+    query = f"""SELECT subject_id
+                FROM subjects
+                WHERE title = '{subject}';"""
+    my_cursor.execute(query)
+
+    subject_id = int(my_cursor.fetchone()[0])
+
+    return subject_id
+
+
+def queue_to_str(queue):
     queue_str = ''
     if queue:
         for i, username, firstname in queue:
@@ -458,10 +451,99 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
         queue_str += 'Черга порожня.\n'
     queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
 
+    return queue_str
+
+
+def active_queue_to_str(queue, active_student):
+    queue_str = ''
+    if queue:
+        for i, username, firstname in queue:
+            if i == active_student:
+                queue_str += f"<b>{i}. {firstname} ({username})</b> 🟢\n"
+            else:
+                queue_str += f"{i}. {firstname} ({username})\n"
+    else:
+        queue_str += 'Черга порожня.\n'
+    queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
+
+    return queue_str
+
+
+@dp.message_handler(state=Form.show_queue_st)
+async def show_needed_queue(message: types.Message, state: FSMContext):
+    subjects_with_queues = get_subjects_with_queues()
+
+    data = message.values["text"]
+    try:
+        data = int(data)
+    except ValueError:
+        subject = data
+    else:
+        if 0 < data <= len(subjects_with_queues):
+            subject = subjects_with_queues[data - 1]
+        else:
+            await message.answer(f"Немає черги на предмет під номером {data}.\n"
+                                 f"Ви можете створити чергу (/create_queue) або додати предмет (/add_subject).")
+            await state.finish()
+            return
+
+    queue_str = queue_to_str(fetch_queue(get_subject_id(subject)))
+
     await message.answer(queue_str)
 
     await state.finish()
+
     return
+
+
+@dp.message_handler(commands='start_queue')
+async def start_queue(message: types.Message):
+    await Form.start_queue_st.set()
+
+    subjects_with_queues = get_subjects_with_queues()
+
+    if subjects_with_queues:
+        str = "Виберіть предмет для запуску черги:\n"
+        for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
+            str += f"{i + 1}. {subject}\n"
+        str += "\nЯкщо на ваш предмет ще немає черги, ви можете створити її командою /create_queue\n"
+    else:
+        str = "Ще не створено жодної черги.\n\n"
+        str += "Створити чергу: /create_queue\n"
+
+    await message.answer(str)
+
+
+@dp.message_handler(state=Form.start_queue_st)
+async def start_queue(message: types.Message, state: FSMContext):
+    subjects_with_queues = get_subjects_with_queues()
+
+    data = message.values["text"]
+    try:
+        data = int(data)
+    except ValueError:
+        subject = data
+    else:
+        if 0 < data <= len(subjects_with_queues):
+            subject = subjects_with_queues[data - 1]
+        else:
+            await message.answer(f"Немає черги на предмет під номером {data}.\n"
+                                 f"Ви можете створити чергу (/create_queue) або додати предмет (/add_subject).")
+            await state.finish()
+            return
+
+    queue_str = active_queue_to_str(fetch_queue(get_subject_id(subject)), 1)
+
+    queue_str += '\n\nЧерга активна'
+
+    await message.answer(queue_str)
+
+    """ 
+    Після евейта форм:
+    'Запускаємо цю чергу?'
+    if answer == +:
+        взяти першого челіка, запам'ятати і позначити жирним шрифтом + емодзі
+    """
 
 
 @dp.message_handler(commands='all_teachers')

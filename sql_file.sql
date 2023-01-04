@@ -118,11 +118,12 @@ DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers`;
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
 (
-    `id_teacher`        INT         NOT NULL AUTO_INCREMENT,
-    `username_telegram` VARCHAR(45) NULL,
-    `phone_number`      CHAR(13)    NULL,
-    `email`             VARCHAR(60) NULL,
-    `info`              TEXT(1000)  NULL,
+    `id_teacher`        INT           NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(200)  NOT NULL,
+    `username_telegram` VARCHAR(45)   NULL,
+    `phone_number`      CHAR(13)      NULL,
+    `email`             VARCHAR(60)   NULL,
+    `info`              TEXT(1000)    NULL,
     PRIMARY KEY (`id_teacher`),
     UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
     UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
