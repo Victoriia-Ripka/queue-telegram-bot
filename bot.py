@@ -538,13 +538,6 @@ async def start_queue(message: types.Message, state: FSMContext):
 
     await message.answer(queue_str)
 
-    """ 
-    Після евейта форм:
-    'Запускаємо цю чергу?'
-    if answer == +:
-        взяти першого челіка, запам'ятати і позначити жирним шрифтом + емодзі
-    """
-
 
 @dp.message_handler(commands='all_teachers')
 async def all_teachers(message: types.Message):
