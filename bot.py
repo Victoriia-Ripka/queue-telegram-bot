@@ -720,9 +720,6 @@ if __name__ == '__main__':
             `telegram_user_id` CHAR(12) NOT NULL,
             `position` INT NOT NULL,
             PRIMARY KEY (`id_sign_up`),
-            UNIQUE INDEX `position_UNIQUE` (`position` ASC) VISIBLE,
-            UNIQUE INDEX `id_queue_UNIQUE` (`id_queue` ASC) VISIBLE,
-            UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
             CONSTRAINT `id_queue fk from Sign_ups to Queue`
                 FOREIGN KEY (`id_queue`)
                 REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
