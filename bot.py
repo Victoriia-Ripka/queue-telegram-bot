@@ -649,10 +649,10 @@ async def sign_out(message: types.Message):
             id_queue = my_cursor.fetchone()[0]
 
             cheak_sign_up = """SELECT *
-                                FROM sign_ups
-                                WHERE telegram_user_id = %s
-                                AND id_queue = %s;
-                                """
+                               FROM sign_ups
+                               WHERE telegram_user_id = %s
+                               AND id_queue = %s;
+                               """
             my_cursor.execute(cheak_sign_up, (user_id, id_queue))
             exist = bool(my_cursor.fetchone())
 
@@ -666,9 +666,10 @@ async def sign_out(message: types.Message):
                 await message.answer(f"Вас було видалено з черги")
             else:
                 await message.answer(
-                    f"Ви не були записані в чергу. Але не переживайте, результат, це всеодно, що вас виписали")
+                    f"Ви не були записані в чергу на {subject}."
+                    f" Але не переживайте, результат, це всеодно, що вас виписали")
         else:
-            await message.answer(f"До цього предмету ще не створена черга. Ви можете її створити /create_queue")
+            await message.answer(f"До предмету {subject} ще не створена черга. Ви можете її створити /create_queue")
     else:
         await message.answer(f"Предмет {subject} невідомий. Ви можете додати предмет командою /add_lesson")
     return
