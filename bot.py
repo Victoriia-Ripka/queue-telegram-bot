@@ -146,6 +146,19 @@ def get_subjects():
     return subjects
 
 
+def get_subjects_with_queues():
+    my_cursor.execute("""SELECT DISTINCT title FROM subjects
+                      WHERE subject_id IN
+                      (SELECT subject_id FROM queues);""")
+    result = my_cursor.fetchall()
+
+    subjects_with_queues = []
+    for subject in result:
+        subjects_with_queues.append(subject[0])
+
+    return subjects_with_queues
+
+
 @dp.message_handler(commands='create_queue')
 async def create_queue(message: types.Message):
     await Form.create_queue_st.set()
@@ -163,6 +176,7 @@ async def create_queue(message: types.Message):
 @dp.message_handler(state=Form.create_queue_st)
 async def create_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
+    subjects_with_queues = get_subjects_with_queues()
 
     data = message.values["text"]
 
@@ -178,7 +192,7 @@ async def create_queue(message: types.Message, state: FSMContext):
     except ValueError:
         subject = data
 
-    if subject in subjects:
+    if subject in subjects_with_queues:
         await message.answer(f"Queue by lesson {subject} already exist")
         await state.finish()
         return
@@ -214,6 +228,7 @@ async def clear_queue(message: types.Message):
 @dp.message_handler(state=Form.clear_queue_st)
 async def clear_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
+    subjects_with_queues = get_subjects_with_queues()
 
     data = message.values["text"]
 
@@ -228,18 +243,22 @@ async def clear_queue(message: types.Message, state: FSMContext):
     except ValueError:
         subject = data
 
-    if subject in get_subjects():
-        delete_users = """DELETE sign_ups FROM sign_ups
-                          JOIN queues
-                                 USING(id_queue)
-                          JOIN subjects sb
-                                 USING(subject_id)
-                          WHERE sb.title = %s;
-                          """
+    if subject in subjects:
+        if subject in subjects_with_queues:
+            delete_users = """DELETE sign_ups FROM sign_ups
+                              JOIN queues
+                                     USING(id_queue)
+                              JOIN subjects sb
+                                     USING(subject_id)
+                              WHERE sb.title = %s;
+                              """
 
-        my_cursor.execute(delete_users, (subject,))
-        db.mydb.commit()
-        await message.answer(f"Черга на предмет {subject} була очищена")
+            my_cursor.execute(delete_users, (subject,))
+            db.mydb.commit()
+            await message.answer(f"Черга на предмет {subject} була очищена")
+        else:
+            await message.answer(f"Черга на предмет {subject} ще не створення."
+                                 f" Ви можете сторити її командую /create_queue")
     else:
         await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
     await state.finish()
@@ -263,7 +282,10 @@ async def delete_queue(message: types.Message):
 @dp.message_handler(state=Form.delete_queue_st)
 async def delete_queue(message: types.Message, state: FSMContext):
     subjects = get_subjects()
+    subjects_with_queues = get_subjects_with_queues()
+
     data = message.values["text"]
+
     try:
         if 0 < int(data) <= len(subjects):
             subject = subjects[int(data) - 1]
@@ -273,15 +295,19 @@ async def delete_queue(message: types.Message, state: FSMContext):
             return
     except ValueError:
         subject = data
-    if subject in get_subjects():
-        delete_users = """DELETE queues FROM queues
-                          JOIN subjects sb
-                                 USING(subject_id)
-                          WHERE sb.title = %s;
-                          """
-        my_cursor.execute(delete_users, (subject,))
-        db.mydb.commit()
-        await message.answer(f"Черга на предмет {subject} була видалена")
+    if subject in subjects:
+        if subject in subjects_with_queues:
+            delete_users = """DELETE queues FROM queues
+                              JOIN subjects sb
+                                     USING(subject_id)
+                              WHERE sb.title = %s;
+                              """
+            my_cursor.execute(delete_users, (subject,))
+            db.mydb.commit()
+            await message.answer(f"Черга на предмет {subject} була видалена")
+        else:
+            await message.answer(f"Черга на предмет {subject} ще не створення."
+                                 f" Ви можете сторити її командую /create_queue")
     else:
         await message.answer(f"Subject {data} is unknown. You can add lesson by /add_lesson")
     await state.finish()
