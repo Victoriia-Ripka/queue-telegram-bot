@@ -863,12 +863,24 @@ async def sign_out(message: types.Message):
             exists = bool(my_cursor.fetchone())
 
             if exists:
-                delete_sign_up = """DELETE FROM sign_ups
-                                    WHERE telegram_user_id = %s
-                                    AND id_queue = %s;
-                                    """
-                my_cursor.execute(delete_sign_up, (user_id, id_queue))
+                get_position = """SELECT position FROM sign_ups
+                                  WHERE telegram_user_id = %s
+                                  AND id_queue = %s;"""
+                my_cursor.execute(get_position, (user_id, id_queue))
+                position = int(my_cursor.fetchone()[0])
+
+                delete_sign_up = f"""DELETE FROM sign_ups
+                                     WHERE position = {position} ;
+                                     """
+                my_cursor.execute(delete_sign_up)
                 db.mydb.commit()
+
+                update_positions = f"""UPDATE sign_ups
+                                       SET position = position-1
+                                       WHERE position > {position};"""
+                my_cursor.execute(update_positions)
+                db.mydb.commit()
+
                 await message.answer(f"Вас було видалено з черги")
             else:
                 await message.answer(
