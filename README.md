@@ -12,6 +12,7 @@ commands:
 add_student_to_queue + add_student - vitalik
 
 ✅ show_needed_queue - dima
+✅ start_queue - dima
 show_current_student(nearest_future) - dima
 next (queue to next student) - dima
 
