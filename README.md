@@ -5,6 +5,8 @@
 commands:
 ✅ add_teacher - vika
 ✅ add_subject - vika
+✅ update_teacher - vika
+✅ update_subject - vika
 ✅ delete_teacher - vika
 ✅ delete_subject - vika
 
