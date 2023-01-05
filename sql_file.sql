@@ -48,7 +48,7 @@ DROP TABLE IF EXISTS `queue-bot-kpi`.`Students`;
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
 (
-    `telegram_user_id` INT         NOT NULL,
+    `telegram_user_id` CHAR(12)    NOT NULL,
     `username`         VARCHAR(45) NULL,
     `firstname`        VARCHAR(45) NULL,
     PRIMARY KEY (`telegram_user_id`),
@@ -88,19 +88,16 @@ DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups`;
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 (
-    `id_sign_up`       INT NOT NULL AUTO_INCREMENT,
-    `id_queue`         INT NOT NULL,
-    `telegram_user_id` INT NOT NULL,
-    `position`         INT NOT NULL,
+    `id_sign_up`       INT      NOT NULL AUTO_INCREMENT,
+    `id_queue`         INT      NOT NULL,
+    `telegram_user_id` CHAR(12) NOT NULL,
+    `position`         INT      NOT NULL,
     PRIMARY KEY (`id_sign_up`),
-    UNIQUE INDEX `position_UNIQUE` (`position` ASC) VISIBLE,
-    UNIQUE INDEX `id_queue_UNIQUE` (`id_queue` ASC) VISIBLE,
-    UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
     CONSTRAINT `id_queue fk from Sign_ups to Queue`
         FOREIGN KEY (`id_queue`)
             REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+            ON DELETE NO ACTION
+            ON UPDATE NO ACTION,
   CONSTRAINT `telegram_user_id fk from Sign_ups to Students`
         FOREIGN KEY (`telegram_user_id`)
             REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)

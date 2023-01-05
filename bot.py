@@ -601,6 +601,78 @@ async def all_students(message: types.Message):
     await message.answer(all_students_str)
     return
 
+@dp.message_handler(commands='sign_out')
+async def sign_out(message: types.Message):
+    # Запис нового користувача
+    user = message.from_user
+    user_id = user.id
+    name = user.first_name
+    username = user.username
+
+    # Записуємо користувача в базу, якщо його немає
+    get_user = "SELECT * FROM students WHERE telegram_user_id = %s"
+    my_cursor.execute(get_user, (user_id,))
+    exist = my_cursor.fetchone()
+
+    if not exist:
+        put_user = "INSERT INTO students VALUES(%s, %s, %s)"
+        my_cursor.execute(put_user, (user_id, username, name))
+        db.mydb.commit()
+
+    data = message.get_args()
+    if not data:
+        await message.answer("Неправильна команда. Необхідно вказати назву або"
+                             " номер предмету, для якого хочете покинути чергу.\nНаприклад /sign_out Математика")
+        return
+
+    subjects = get_subjects()
+    sub_with_queue = get_subjects_with_queues()
+
+    try:
+        if 0 < int(data) <= len(subjects):
+            subject = subjects[int(data) - 1]
+        else:
+            await message.answer(f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_lesson")
+            return
+    except ValueError:
+        subject = data
+
+    if subject in subjects:
+        if subject in sub_with_queue:
+
+            get_queue_id = """SELECT id_queue 
+                              FROM queues 
+                              JOIN subjects sb
+                                USING (subject_id)
+                              WHERE sb.title = %s"""
+            my_cursor.execute(get_queue_id, (subject,))
+            id_queue = my_cursor.fetchone()[0]
+
+            cheak_sign_up = """SELECT *
+                               FROM sign_ups
+                               WHERE telegram_user_id = %s
+                               AND id_queue = %s;
+                               """
+            my_cursor.execute(cheak_sign_up, (user_id, id_queue))
+            exist = bool(my_cursor.fetchone())
+
+            if exist:
+                delete_sign_up = """DELETE FROM sign_ups
+                                    WHERE telegram_user_id = %s
+                                    AND id_queue = %s;
+                                    """
+                my_cursor.execute(delete_sign_up, (user_id, id_queue))
+                db.mydb.commit()
+                await message.answer(f"Вас було видалено з черги")
+            else:
+                await message.answer(
+                    f"Ви не були записані в чергу на {subject}."
+                    f" Але не переживайте, результат, це всеодно, що вас виписали")
+        else:
+            await message.answer(f"До предмету {subject} ще не створена черга. Ви можете її створити /create_queue")
+    else:
+        await message.answer(f"Предмет {subject} невідомий. Ви можете додати предмет командою /add_lesson")
+    return
 
 if __name__ == '__main__':
     try:
@@ -623,7 +695,7 @@ if __name__ == '__main__':
                 ON UPDATE CASCADE);"""
         my_cursor.execute(sql_command)
         sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students` (
-            `telegram_user_id` INT NOT NULL,
+            `telegram_user_id` CHAR(12) NOT NULL,
             `username` VARCHAR(45) NULL,
             `firstname` VARCHAR(45) NULL,
             PRIMARY KEY (`telegram_user_id`),
@@ -645,12 +717,9 @@ if __name__ == '__main__':
         sql_command = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups` (
             `id_sign_up` INT NOT NULL AUTO_INCREMENT,
             `id_queue` INT NOT NULL,
-            `telegram_user_id` INT NOT NULL,
+            `telegram_user_id` CHAR(12) NOT NULL,
             `position` INT NOT NULL,
             PRIMARY KEY (`id_sign_up`),
-            UNIQUE INDEX `position_UNIQUE` (`position` ASC) VISIBLE,
-            UNIQUE INDEX `id_queue_UNIQUE` (`id_queue` ASC) VISIBLE,
-            UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
             CONSTRAINT `id_queue fk from Sign_ups to Queue`
                 FOREIGN KEY (`id_queue`)
                 REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
