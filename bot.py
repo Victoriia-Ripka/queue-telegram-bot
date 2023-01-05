@@ -618,12 +618,117 @@ async def all_students(message: types.Message):
     await message.answer(all_students_str)
     return
 
+
+@dp.message_handler(commands='sign_in')
+async def sign_in(message: types.Message):
+    user = message.from_user
+    add_user(user)
+    user_id = user.id
+    user_name = user.first_name
+
+    arguments = message.get_args().split(" ")
+    if len(arguments) not in (1, 2) or not arguments[0]:
+        await message.answer("Неправильна команда. Необхідно вказати назву або"
+                             " номер предмету, в чергу якого бажаєте записату.\nНаприклад /sign_in Математика")
+        return
+
+    data = arguments[0]
+    subjects = get_subjects()
+    sub_with_queue = get_subjects_with_queues()
+
+    try:
+        if 0 < int(data) <= len(subjects):
+            subject = subjects[int(data) - 1]
+        else:
+            await message.answer(
+                f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_lesson")
+            return
+    except ValueError:
+        subject = data
+
+    if subject not in subjects:
+        await message.answer(
+            f"Предмет {subject} невідомий. Ви додати предмет командою /add_lesson")
+        return
+
+    if subject not in sub_with_queue:
+        await message.answer(
+            f"Предмет {subject} не має черги. Ви можете створити чергу командою /create_queue")
+        return
+
+    cheak_stundent = """SELECT su.position
+                        FROM sign_ups su
+                        JOIN students st
+                            USING (telegram_user_id)
+                        JOIN queues qu
+                            USING (id_queue)
+                        JOIN subjects sb
+                            USING (subject_id)
+                        WHERE st.telegram_user_id = %s and sb.title = %s"""
+    my_cursor.execute(cheak_stundent, (user_id, subject))
+    exist_pos = my_cursor.fetchone()
+
+    if exist_pos:
+        await message.answer(f"Ви вже записані в цю чергу під номером {exist_pos[0]}. Якщо бажаєте змінити позицію, то"
+                             f"\"ВИЙДИ ЗВІДСИ, РОЗБІЙНИК!\"")
+        return
+
+    if len(arguments) == 1:  # Випадок, коли юзер вказав лише назву предмету. Записуємо на перше вільне місце
+        position = 1
+    else:  # Випадок, коли юзер вказав назву предмету та конкретне місце в черзі
+        try:
+            position = int(arguments[1])
+        except ValueError:
+            await message.answer("Неправильна команда. Необхідно вказати назву або"
+                                 " номер предмету та бажаний номер у черзі, в чергу якого бажаєте записату."
+                                 "\nНаприклад /sign_in Математика 5")
+            return
+
+        if position < 0 or position > 25:  # !!!Додати можливість зміни максимальної кількості
+            await message.answer("Помилка. Максимальний номер у черзі 25")
+            return
+
+        # Перевірка, чи є вже на цьому місці записаний студент
+
+        check_student_by_pos = """SELECT st.firstname
+                                   FROM sign_ups su
+                                   JOIN students st
+                                       USING (telegram_user_id)
+                                   JOIN queues qu
+                                       USING (id_queue)
+                                   JOIN subjects sb
+                                       USING (subject_id)
+                                   WHERE su.position = %s and sb.title = %s"""
+
+        my_cursor.execute(check_student_by_pos, (position, subject))
+        name_of_student = my_cursor.fetchone()
+
+        if name_of_student:
+            await message.answer(f"Помилка. На цю позицію записаний/на вже {name_of_student[0]}")
+            return
+
+    get_id_queue = """SELECT id_queue
+                      FROM queues
+                      JOIN subjects sb
+                        USING (subject_id)
+                      WHERE sb.title = %s"""
+    my_cursor.execute(get_id_queue, (subject,))
+    id_queue = my_cursor.fetchone()[0]
+
+    sign_up_student = """INSERT INTO sign_ups
+                         VALUES(DEFAULT, %s, %s, %s)"""
+    my_cursor.execute(sign_up_student, (id_queue, user_id, position))
+    db.mydb.commit()
+
+    await message.answer(f"{user_name} було успішно записано в чергу на {subject} під номером {position}")
+    return
+
+
 @dp.message_handler(commands='sign_out')
 async def sign_out(message: types.Message):
     user = message.from_user
     add_user(user)
     user_id = user.id
-
 
     data = message.get_args()
     if not data:
