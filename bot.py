@@ -677,7 +677,7 @@ async def sign_in(message: types.Message):
     exist_pos = my_cursor.fetchone()
 
     """
-    Заборонити запис раніше курентної позиції в активній черзі!
+    Заборонити запис раніше курентної позиції в активній черзі!!!
     """
 
     if exist_pos:
