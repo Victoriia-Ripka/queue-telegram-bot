@@ -8,20 +8,23 @@ commands:
 ✅ delete_teacher - vika
 ✅ delete_subject - vika
 
-✅create_queueu - vitalik
-✅clear_queue - vitalik
-✅delete_queue - vitalik
-✅sign_up (optional poz arg) - vitalik
+
+✅ create_queueu - vitalik
+✅ clear_queue - vitalik
+✅ delete_queue - vitalik
+✅ sign_up (optional poz arg) - vitalik
 (Необхідно унеможливити запис на уже пройдені позиції)
-✅sign_out - vitalik
+✅ sign_out - vitalik
 
-✅show_needed_queue - dima
+✅ show_needed_queue - dima
+✅ start_queue - dima
 show_current_student(nearest_future) - dima
-next (queue to next student) - dima
+(буде написана в наступному пуші)
+✅ next (queue to next student) - dima
 
-✅all_teachers
-✅all_subjects
-✅all_students
+✅ all_teachers - dima
+✅ all_subjects - dima
+✅ all_students - dima
 
 
 start, help, end, menu-->
