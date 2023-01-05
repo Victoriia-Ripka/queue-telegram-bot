@@ -16,6 +16,9 @@ logging.basicConfig(level=logging.INFO)
 
 my_cursor = db.mydb.cursor()
 
+active_subject = ''
+active_student = 1
+
 
 class Form(StatesGroup):
     subject = State()
@@ -29,6 +32,7 @@ class Form(StatesGroup):
 
     show_queue_st = State()
     start_queue_st = State()
+    next_st = State()
 
 
 @dp.message_handler(commands="start")
@@ -277,11 +281,7 @@ async def create_queue(message: types.Message, state: FSMContext):
         await state.finish()
         return
     else:
-        get_subject_id = """SELECT subject_id
-                            FROM subjects
-                            WHERE title = %s;"""
-        my_cursor.execute(get_subject_id, (subject,))
-        subject_id = my_cursor.fetchone()
+        subject_id = get_subject_id(subject)
 
         if subject_id:
             my_cursor.execute("INSERT INTO queues (id_queue, subject_id) VALUES(DEFAULT, %s)", subject_id)
@@ -424,22 +424,32 @@ def fetch_queue(subject_id):
                 INNER JOIN students
                 ON sign_ups.telegram_user_id = students.telegram_user_id
                 AND id_queue = (SELECT id_queue FROM queues
-                                WHERE subject_id = {subject_id});"""
+                                WHERE subject_id = {subject_id})
+                ORDER BY position;"""
     my_cursor.execute(query)
     queue = my_cursor.fetchall()
 
     return queue
 
 
-def get_subject_id(subject):
+def get_subject_id(subject=None):
+    global active_subject
+
+    if subject:
+        active_subject = subject
+
     query = f"""SELECT subject_id
                 FROM subjects
-                WHERE title = '{subject}';"""
+                WHERE title = '{active_subject}';"""
     my_cursor.execute(query)
 
-    subject_id = int(my_cursor.fetchone()[0])
+    temp = my_cursor.fetchone()
 
-    return subject_id
+    if temp:
+        subject_id = int(temp[0])
+        return subject_id
+    else:
+        return 0
 
 
 def queue_to_str(queue):
@@ -448,23 +458,31 @@ def queue_to_str(queue):
         for i, username, firstname in queue:
             queue_str += f"{i}. {firstname} ({username})\n"
     else:
-        queue_str += 'Черга порожня.\n'
+        queue_str += 'Черга порожня або немає такого предмету.\n'
     queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
 
     return queue_str
 
 
-def active_queue_to_str(queue, active_student):
+def active_queue_to_str(queue):
+
     queue_str = ''
     if queue:
         for i, username, firstname in queue:
             if i == active_student:
-                queue_str += f"<b>{i}. {firstname} ({username})</b> 🟢\n"
+                queue_str += f"{i}. <b>{firstname} ({username})</b> 🟢\n"
+            elif i == active_student + 1:
+                queue_str += f"{i}. <i>{firstname} ({username}) — приготуватися</i>\n"
+            elif i < active_student:
+                queue_str += f"<del>{i}. {firstname} ({username})</del>\n"
             else:
                 queue_str += f"{i}. {firstname} ({username})\n"
     else:
         queue_str += 'Черга порожня.\n'
     queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
+
+    if queue:
+        queue_str += '\n\nЧерга активна'
 
     return queue_str
 
@@ -472,6 +490,7 @@ def active_queue_to_str(queue, active_student):
 @dp.message_handler(state=Form.show_queue_st)
 async def show_needed_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
+
 
     data = message.values["text"]
     try:
@@ -517,24 +536,42 @@ async def start_queue(message: types.Message):
 @dp.message_handler(state=Form.start_queue_st)
 async def start_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
+    global active_subject
 
     data = message.values["text"]
     try:
         data = int(data)
     except ValueError:
-        subject = data
+        active_subject = data
+
     else:
         if 0 < data <= len(subjects_with_queues):
-            subject = subjects_with_queues[data - 1]
+            active_subject = subjects_with_queues[data - 1]
         else:
             await message.answer(f"Немає черги на предмет під номером {data}.\n"
                                  f"Ви можете створити чергу (/create_queue) або додати предмет (/add_subject).")
             await state.finish()
             return
 
-    queue_str = active_queue_to_str(fetch_queue(get_subject_id(subject)), 1)
+    queue_str = active_queue_to_str(fetch_queue(get_subject_id()))
 
     queue_str += '\n\nЧерга активна'
+
+    await message.answer(queue_str)
+
+    await state.finish()
+
+    return
+
+
+@dp.message_handler(commands='next')
+async def next(message: types.Message):
+    # await Form.next_st.set()
+
+    global active_student
+    active_student += 1
+
+    queue_str = active_queue_to_str(fetch_queue(get_subject_id()))
 
     await message.answer(queue_str)
 
@@ -545,7 +582,7 @@ async def all_teachers(message: types.Message):
                teachers.email, teachers.info, subjects.title
                FROM teachers
                LEFT OUTER JOIN subjects
-               ON teachers.id_teacher = subjects.id_teacher"""
+                 USING (id_teacher);"""
     my_cursor.execute(query)
     teachers = my_cursor.fetchall()
 
@@ -567,7 +604,7 @@ async def all_subjects(message: types.Message):
     query = """SELECT subjects.subject_id, subjects.title, teachers.username_telegram
                FROM subjects
                LEFT OUTER JOIN teachers
-               ON subjects.id_teacher = teachers.id_teacher;"""
+                 USING (id_teacher);"""
     my_cursor.execute(query)
     subjects = my_cursor.fetchall()
 
@@ -600,6 +637,7 @@ async def all_students(message: types.Message):
 
     await message.answer(all_students_str)
     return
+
 
 @dp.message_handler(commands='sign_out')
 async def sign_out(message: types.Message):
