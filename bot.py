@@ -618,6 +618,14 @@ async def all_students(message: types.Message):
     await message.answer(all_students_str)
     return
 
+def get_first_free_pos(positions):
+    if not positions:
+        return 1
+    for i in range(1, 25):  # зробити адаптивним максимальну кількість
+        if i not in positions:
+            return i
+
+    return None
 
 @dp.message_handler(commands='sign_in')
 async def sign_in(message: types.Message):
@@ -668,13 +676,33 @@ async def sign_in(message: types.Message):
     my_cursor.execute(cheak_stundent, (user_id, subject))
     exist_pos = my_cursor.fetchone()
 
+    """
+    Заборонити запис раніше курентної позиції в активній черзі!
+    """
+
     if exist_pos:
         await message.answer(f"Ви вже записані в цю чергу під номером {exist_pos[0]}. Якщо бажаєте змінити позицію, то"
                              f"\"ВИЙДИ ЗВІДСИ, РОЗБІЙНИК!\"")
         return
 
     if len(arguments) == 1:  # Випадок, коли юзер вказав лише назву предмету. Записуємо на перше вільне місце
-        position = 1
+        get_all_from_queue = """SELECT position
+                                FROM sign_ups
+                                JOIN queues
+                                    USING (id_queue)
+                                JOIN subjects sb
+                                    USING (subject_id)
+                                WHERE sb.title = %s"""
+
+        my_cursor.execute(get_all_from_queue, (subject,))
+        positions = my_cursor.fetchall()
+        positions = tuple(map(lambda x: x[0], positions))
+        position = get_first_free_pos(positions)
+
+        if not position:
+            await message.answer("Черга заповнена. Можна змінити кількість студенетів і налаштуваннях.")
+            return
+
     else:  # Випадок, коли юзер вказав назву предмету та конкретне місце в черзі
         try:
             position = int(arguments[1])
