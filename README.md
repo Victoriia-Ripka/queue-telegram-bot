@@ -18,8 +18,7 @@ commands:
 
 ✅ show_needed_queue - dima
 ✅ start_queue - dima
-show_current_student(nearest_future) - dima
-(буде написана в наступному пуші)
+✅ show_current_student(nearest_future) - dima
 ✅ next (queue to next student) - dima
 
 ✅ all_teachers - dima
