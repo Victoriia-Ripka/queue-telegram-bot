@@ -452,6 +452,28 @@ def get_subject_id(subject=None):
         return 0
 
 
+def get_sign_up(subject=None, student=None):
+    act_sb = subject if subject else active_subject
+    act_st = student if student else active_student
+
+    queue = fetch_queue(get_subject_id(act_sb))
+
+    sign_up_str = ''
+    if queue:
+        for i, username, firstname in queue:
+            if i == act_st:
+                sign_up_str += f"🟢 Зараз здає <b>{firstname} ({username})</b>\nМісце в черзі: {i}\n\n"
+            if i == act_st + 1:
+                sign_up_str += f"Наступним здаватиме <i>{firstname} ({username})</i>\n"
+    else:
+        sign_up_str += 'Черга порожня або немає такого предмету.\n'
+    sign_up_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
+                   '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
+                   '\nВсі предмети: /all_subjects'
+
+    return sign_up_str
+
+
 def queue_to_str(queue):
     queue_str = ''
     if queue:
@@ -459,7 +481,9 @@ def queue_to_str(queue):
             queue_str += f"{i}. {firstname} ({username})\n"
     else:
         queue_str += 'Черга порожня або немає такого предмету.\n'
-    queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
+    queue_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
+                 '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
+                 '\nВсі предмети: /all_subjects'
 
     return queue_str
 
@@ -477,12 +501,12 @@ def active_queue_to_str(queue):
                 queue_str += f"<del>{i}. {firstname} ({username})</del>\n"
             else:
                 queue_str += f"{i}. {firstname} ({username})\n"
+        queue_str += '\nЧерга активна ☑️\n'
     else:
         queue_str += 'Черга порожня.\n'
-    queue_str += '\nЗаписатися в чергу: /add_student_to_queue'
-
-    if queue:
-        queue_str += '\n\nЧерга активна'
+    queue_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
+                 '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
+                 '\nВсі предмети: /all_subjects'
 
     return queue_str
 
@@ -572,8 +596,6 @@ async def start_queue(message: types.Message, state: FSMContext):
 
     queue_str = active_queue_to_str(fetch_queue(get_subject_id()))
 
-    queue_str += '\n\nЧерга активна'
-
     await message.answer(queue_str)
 
     await state.finish()
@@ -591,6 +613,11 @@ async def next(message: types.Message):
     queue_str = active_queue_to_str(fetch_queue(get_subject_id()))
 
     await message.answer(queue_str)
+
+
+@dp.message_handler(commands='show_current_student')
+async def show_current_student(message: types.Message):
+    await message.answer(get_sign_up())
 
 
 @dp.message_handler(commands='all_teachers')
@@ -811,7 +838,7 @@ async def sign_out(message: types.Message):
         if 0 < int(data) <= len(subjects):
             subject = subjects[int(data) - 1]
         else:
-            await message.answer(f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_lesson")
+            await message.answer(f"Предмет за номером {data} невідомий. Ви можете додати предмет командою /add_subject")
             return
     except ValueError:
         subject = data
