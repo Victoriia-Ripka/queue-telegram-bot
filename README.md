@@ -11,7 +11,8 @@ commands:
 ✅create_queueu - vitalik
 ✅clear_queue - vitalik
 ✅delete_queue - vitalik
-sign_up (optional poz arg) - vitalik
+✅sign_up (optional poz arg) - vitalik
+(Необхідно унеможливити запис на уже пройдені позиції)
 ✅sign_out - vitalik
 
 ✅show_needed_queue - dima
