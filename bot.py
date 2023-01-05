@@ -854,15 +854,15 @@ async def sign_out(message: types.Message):
             my_cursor.execute(get_queue_id, (subject,))
             id_queue = my_cursor.fetchone()[0]
 
-            cheak_sign_up = """SELECT *
+            check_sign_up = """SELECT *
                                FROM sign_ups
                                WHERE telegram_user_id = %s
                                AND id_queue = %s;
                                """
-            my_cursor.execute(cheak_sign_up, (user_id, id_queue))
-            exist = bool(my_cursor.fetchone())
+            my_cursor.execute(check_sign_up, (user_id, id_queue))
+            exists = bool(my_cursor.fetchone())
 
-            if exist:
+            if exists:
                 delete_sign_up = """DELETE FROM sign_ups
                                     WHERE telegram_user_id = %s
                                     AND id_queue = %s;
