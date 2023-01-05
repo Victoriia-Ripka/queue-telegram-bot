@@ -15,6 +15,7 @@ sign_up (optional poz arg) - vitalik
 ✅ sign_out - vitalik
 
 ✅ show_needed_queue - dima
+✅ start_queue - dima
 show_current_student(nearest_future) - dima
 next (queue to next student) - dima
 
