@@ -484,6 +484,7 @@ def active_queue_to_str(queue):
     if queue:
         queue_str += '\n\nЧерга активна'
 
+        
     return queue_str
 
 
@@ -497,11 +498,7 @@ def add_user(user):
     my_cursor.execute(get_user, (user_id,))
     exist = my_cursor.fetchone()
 
-    if not exist:
-        put_user = "INSERT INTO students VALUES(%s, %s, %s)"
-        my_cursor.execute(put_user, (user_id, username, name))
-        db.mydb.commit()
-    return
+    return queue_str
 
 
 @dp.message_handler(state=Form.show_queue_st)
@@ -655,7 +652,6 @@ async def all_students(message: types.Message):
     await message.answer(all_students_str)
     return
 
-
 def get_first_free_pos(positions):
     if not positions:
         return 1
@@ -790,13 +786,25 @@ async def sign_in(message: types.Message):
 
     await message.answer(f"{user_name} було успішно записано в чергу на {subject} під номером {position}")
     return
-
+  
 
 @dp.message_handler(commands='sign_out')
 async def sign_out(message: types.Message):
+    # Запис нового користувача
     user = message.from_user
-    add_user(user)
     user_id = user.id
+    name = user.first_name
+    username = user.username
+
+    # Записуємо користувача в базу, якщо його немає
+    get_user = "SELECT * FROM students WHERE telegram_user_id = %s"
+    my_cursor.execute(get_user, (user_id,))
+    exist = my_cursor.fetchone()
+
+    if not exist:
+        put_user = "INSERT INTO students VALUES(%s, %s, %s)"
+        my_cursor.execute(put_user, (user_id, username, name))
+        db.mydb.commit()
 
     data = message.get_args()
     if not data:
