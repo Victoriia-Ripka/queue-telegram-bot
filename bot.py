@@ -514,7 +514,10 @@ def active_queue_to_str(queue):
 def add_user(user):
     user_id = user.id
     name = user.first_name
-    username = '@' + user.username
+    if user.username:
+        username = '@' + user.username
+    else:
+        username = None
 
     # Записуємо користувача в базу, якщо його немає
     get_user = "SELECT * FROM students WHERE telegram_user_id = %s"
@@ -686,7 +689,7 @@ async def all_students(message: types.Message):
 def get_first_free_pos(positions):
     if not positions:
         return 1
-    for i in range(1, 25):  # зробити адаптивним максимальну кількість
+    for i in range(active_student, 25):  # зробити адаптивним максимальну кількість
         if i not in positions:
             return i
 
@@ -740,13 +743,21 @@ async def sign_in(message: types.Message):
                             USING (subject_id)
                         WHERE st.telegram_user_id = %s and sb.title = %s"""
     my_cursor.execute(cheak_stundent, (user_id, subject))
-    exist_pos = my_cursor.fetchone()
+    exist_pos = my_cursor.fetchall()
+    exist_pos = tuple(map(lambda x: x[0], exist_pos))
+
+    if exist_pos and len(exist_pos) == 1:
+        max_pos = exist_pos[0]
+
+    if exist_pos:
+        max_pos = max(exist_pos)
 
     """
     Заборонити запис раніше курентної позиції в активній черзі!!!
+    Дозволити повторно реєструватись людям на "доздачу"
     """
 
-    if exist_pos:
+    if max_pos > active_student:
         await message.answer(f"Ви вже записані в цю чергу під номером {exist_pos[0]}. Якщо бажаєте змінити позицію, то"
                              f"\"ВИЙДИ ЗВІДСИ, РОЗБІЙНИК!\"")
         return
@@ -780,6 +791,10 @@ async def sign_in(message: types.Message):
 
         if position < 0 or position > 25:  # !!!Додати можливість зміни максимальної кількості
             await message.answer("Помилка. Максимальний номер у черзі 25")
+            return
+
+        if position <= active_student:
+            await message.answer(f"Черга під номером {position} вже пройшла. Запишіться вперед по черзі")
             return
 
         # Перевірка, чи є вже на цьому місці записаний студент
