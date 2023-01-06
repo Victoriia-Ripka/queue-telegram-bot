@@ -48,7 +48,7 @@ DROP TABLE IF EXISTS `queue-bot-kpi`.`Students`;
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
 (
-    `telegram_user_id` INT         NOT NULL,
+    `telegram_user_id` CHAR(12)    NOT NULL,
     `username`         VARCHAR(45) NULL,
     `firstname`        VARCHAR(45) NULL,
     PRIMARY KEY (`telegram_user_id`),
@@ -88,19 +88,16 @@ DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups`;
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
 (
-    `id_sign_up`       INT NOT NULL AUTO_INCREMENT,
-    `id_queue`         INT NOT NULL,
-    `telegram_user_id` INT NOT NULL,
-    `position`         INT NOT NULL,
+    `id_sign_up`       INT      NOT NULL AUTO_INCREMENT,
+    `id_queue`         INT      NOT NULL,
+    `telegram_user_id` CHAR(12) NOT NULL,
+    `position`         INT      NOT NULL,
     PRIMARY KEY (`id_sign_up`),
-    UNIQUE INDEX `position_UNIQUE` (`position` ASC) VISIBLE,
-    UNIQUE INDEX `id_queue_UNIQUE` (`id_queue` ASC) VISIBLE,
-    UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
     CONSTRAINT `id_queue fk from Sign_ups to Queue`
         FOREIGN KEY (`id_queue`)
             REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+            ON DELETE NO ACTION
+            ON UPDATE NO ACTION,
   CONSTRAINT `telegram_user_id fk from Sign_ups to Students`
         FOREIGN KEY (`telegram_user_id`)
             REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)
@@ -118,11 +115,12 @@ DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers`;
 
 CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
 (
-    `id_teacher`        INT         NOT NULL AUTO_INCREMENT,
-    `username_telegram` VARCHAR(45) NULL,
-    `phone_number`      CHAR(13)    NULL,
-    `email`             VARCHAR(60) NULL,
-    `info`              TEXT(1000)  NULL,
+    `id_teacher`        INT           NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(200)  NOT NULL,
+    `username_telegram` VARCHAR(45)   NULL,
+    `phone_number`      CHAR(13)      NULL,
+    `email`             VARCHAR(60)   NULL,
+    `info`              TEXT(1000)    NULL,
     PRIMARY KEY (`id_teacher`),
     UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
     UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
