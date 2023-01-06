@@ -243,6 +243,26 @@ def get_subjects_with_queues():
     return subjects_with_queues
 
 
+def get_subject_id(subject=None):
+    global active_subject
+
+    if subject:
+        active_subject = subject
+
+    query = f"""SELECT subject_id
+                FROM subjects
+                WHERE title = '{active_subject}';"""
+    my_cursor.execute(query)
+
+    temp = my_cursor.fetchone()
+
+    if temp:
+        subject_id = temp[0]
+        return subject_id
+    else:
+        return 0
+
+
 @dp.message_handler(commands='create_queue')
 async def create_queue(message: types.Message):
     await Form.create_queue_st.set()
@@ -284,7 +304,7 @@ async def create_queue(message: types.Message, state: FSMContext):
         subject_id = get_subject_id(subject)
 
         if subject_id:
-            my_cursor.execute("INSERT INTO queues (id_queue, subject_id) VALUES(DEFAULT, %s)", subject_id)
+            my_cursor.execute("INSERT INTO queues (id_queue, subject_id) VALUES(DEFAULT, %s)", (subject_id,))
             db.mydb.commit()
             await message.answer(f"Чергу на предмет {subject} створено")
         else:
@@ -403,10 +423,8 @@ async def show_needed_queue(message: types.Message):
     await Form.show_queue_st.set()
     subjects_with_queues = get_subjects_with_queues()
 
-    str = ""
-
     if subjects_with_queues:
-        str += "Виберіть предмет, на який шукаєте чергу:\n"
+        str = "Виберіть предмет, на який шукаєте чергу:\n"
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             str += f"{i + 1}. {subject}\n"
         str += "\nЯкщо на ваш предмет ще немає черги, ви можете створити її командою /create_queue\n"
@@ -434,24 +452,6 @@ def fetch_queue(subject_id):
     return queue
 
 
-def get_subject_id(subject=None):
-    global active_subject
-
-    if subject:
-        active_subject = subject
-
-    query = f"""SELECT subject_id
-                FROM subjects
-                WHERE title = '{active_subject}';"""
-    my_cursor.execute(query)
-
-    temp = my_cursor.fetchone()
-
-    if temp:
-        subject_id = int(temp[0])
-        return subject_id
-    else:
-        return 0
 
 
 def get_sign_up(subject=None, student=None):
