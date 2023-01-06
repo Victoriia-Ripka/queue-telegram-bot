@@ -508,7 +508,6 @@ def active_queue_to_str(queue):
                  '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
                  '\nВсі предмети: /all_subjects'
 
-        
     return queue_str
 
 
@@ -521,8 +520,6 @@ def add_user(user):
     get_user = "SELECT * FROM students WHERE telegram_user_id = %s"
     my_cursor.execute(get_user, (user_id,))
     exist = my_cursor.fetchone()
-
-    return queue_str
 
 
 @dp.message_handler(state=Form.show_queue_st)
@@ -678,6 +675,7 @@ async def all_students(message: types.Message):
 
     await message.answer(all_students_str)
     return
+
 
 def get_first_free_pos(positions):
     if not positions:
