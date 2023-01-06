@@ -23,6 +23,8 @@ active_student = 1
 class Form(StatesGroup):
     subject = State()
     teacher = State()
+    update_subject = State()
+    update_teacher = State()
     delete_subject = State()
     delete_teacher = State()
 
@@ -49,90 +51,107 @@ async def help(message: types.Message):
     await message.answer(text)
 
 
-@dp.message_handler(commands="end")
-async def end(message: types.Message):
-    print("Start deletind DB...")
-    sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers` ;"""
-    my_cursor.execute(sql_command)
-    sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups` ;"""
-    my_cursor.execute(sql_command)
-    sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Queues` ;"""
-    my_cursor.execute(sql_command)
-    sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Students` ;"""
-    my_cursor.execute(sql_command)
-    sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Subjects` ;"""
-    my_cursor.execute(sql_command)
-    print("All tables are deleted")
-    text = "All tables are deleted"
-    await message.answer(text)
+# @dp.message_handler(commands="end")
+# async def end(message: types.Message):
+#     print("Start deletind DB...")
+#     sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Teachers` ;"""
+#     my_cursor.execute(sql_command)
+#     sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Sign_ups` ;"""
+#     my_cursor.execute(sql_command)
+#     sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Queues` ;"""
+#     my_cursor.execute(sql_command)
+#     sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Students` ;"""
+#     my_cursor.execute(sql_command)
+#     sql_command = """DROP TABLE IF EXISTS `queue-bot-kpi`.`Subjects` ;"""
+#     my_cursor.execute(sql_command)
+#     print("All tables are deleted")
+#     text = "All tables are deleted"
+#     await message.answer(text)
 
 
 @dp.message_handler(commands='add_subject')
 async def add_subject_start(message: types.Message):
-    try:
-        await Form.subject.set()
-        await message.answer("""WRITE\nsubject title and id_teacher""")
-
-    except Exception as e:
-        print(e)
-        await message.answer("Conversation Terminated✔")
-        return
+    await Form.subject.set()
+    subjects = get_subjects()
+    if subjects:
+        str = "Список предметів:\n"
+        for subject, i in zip(subjects, range(len(subjects))):
+            str += f"{i + 1}. {subject}\n"
+    else:
+        str = "Список предметів пустий.\nВпишіть назву нового предмета та id викладача"
+    
+    teachers = get_teachers_with_id()
+    if teachers:
+        str += "Список викладачів:\n"
+        for teacher, i in zip(teachers, range(len(teachers))):
+            str += f"{teacher[0]}: {teacher[1]}\n"
+        str += "Впишіть назву предмета та id викладача"
+    else:
+        str = "Список викладачів пустий.\nСпочатку створіть список викладачів /add_teacher"
+    await message.answer(str)
+    return 
 
 
 @dp.message_handler(state=Form.subject)
 async def add_subject(message: types.Message, state: FSMContext):
     data = message.values["text"].split(" ")
-    
-    try:
-        title = data[0]
-        print(title)
-        teacher_id = data[1]
-        print(teacher_id)
-    except ValueError:
+    if len(data) >= 2:
+        teacher_id = int(data[len(data)-1])
+        separator = "_"
+        data.pop()
+        title = separator.join(data)
+        if not isinstance(teacher_id, int) or not isinstance(title, str):
+            await state.finish()
+            await message.answer(f"Ви ввели непривильні дані. Спробуйте ще раз /add_subject 2")
+            return
+    else:
         await state.finish()
-        print(ValueError)
-        await message.answer("sorry, you input wrong data type. please, try again")
+        await message.answer("Ви ввели непривильні дані. Спробуйте ще раз /add_subject 1")
         return
-
-    # if isinstance(title, str) and isinstance(teacher_id, int):
+    
     new_subject = (title, teacher_id)
     sql = "INSERT INTO Subjects (subject_id, title, id_teacher) VALUES (NULL, %s, %s);"
     my_cursor.execute(sql, new_subject)
     db.mydb.commit() 
-
-    await state.finish()
     
     # maybe should add some errors handle
     if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /add_subject 3")
     else:
-        await message.answer(f"{title} correctly inserted")
-
+        await message.answer(f"{title} додан до списку")
+    await state.finish()
+    return       
+    
 
 @dp.message_handler(commands='add_teacher')
 async def add_teacher_start(message: types.Message):
-    try:
-        await Form.teacher.set()
-        await message.answer("""WRITE\nusername_telegram, phone_number, email, additional info""")
-
-    except Exception as e:
-        print(e)
-        await message.answer("Conversation Terminated✔")
-        return
+    await Form.teacher.set()
+    teachers = get_teachers()
+    if teachers:
+        str = "Список викладачів:\n"
+        for subject, i in zip(teachers, range(len(teachers))):
+            str += f"{i + 1}. {subject}\n"
+        str += "Впишіть тег викладача, номер телефону, email, ім'я"
+    else:
+        str = "Список викладачів пустий.\nВпишіть тег викладача, номер телефону, email, ім'я"
+    await message.answer(str)
 
 
 @dp.message_handler(state=Form.teacher)
 async def add_teacher(message: types.Message, state: FSMContext):
     data = message.values["text"].split(" ")
-    try:
+    if len(data) == 4:
         username_telegram = data[0]
-        # how to set NULL to fields
-        phone_number = data[1]  # may contain nothing
-        email = data[2]  # may contain nothing
-        info = data[3]  # may contain nothing
-    except ValueError:
+        phone_number = data[1]
+        email = data[2] 
+        info = data[3] 
+        if not isinstance(email, str) and not isinstance(username_telegram, str):
+            await state.finish()
+            await message.answer("Щось пішло не так. Спробуйте ще раз /update_teacher")
+            return
+    else:
         await state.finish()
-        await message.answer("sorry, you input wrong data type. please, try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /add_teacher")
         return
 
     new_teacher = (username_telegram, phone_number, email, info)
@@ -141,83 +160,218 @@ async def add_teacher(message: types.Message, state: FSMContext):
     db.mydb.commit() 
     await state.finish()
     
-    # maybe should add some errors handle
     if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+        await message.answer("Щось пішло не так. Спробуйте ще раз /add_teacher")
     else:
-        await message.answer(f"{username_telegram} correctly inserted")
+        await message.answer(f"{username_telegram} додан до списку")
+
+
+@dp.message_handler(commands='update_subject')
+async def update_subject_start(message: types.Message):
+    await Form.update_subject.set()
+    subjects = get_subjects_with_teachers()
+    if subjects:
+        str = "Список предметів:\n"
+        for subject, i in zip(subjects, range(len(subjects))):
+            str += f"{subject[0]}. {subject[1]} - {subject[2]}\n"
+        
+        teachers = get_teachers_with_id()
+        str += "Список викладачів:\n"
+        for teacher, i in zip(teachers, range(len(teachers))):
+            str += f"{teacher[0]}: {teacher[1]}\n"
+        str += "Напишіть id предмета, нову назву предмета та id викладача"
+    else:
+        str = "Список предметів пустий. Додайте предмет /add_subject\n"
+    await message.answer(str)
+    return 
+
+
+@dp.message_handler(state=Form.update_subject)
+async def update_subject(message: types.Message, state: FSMContext):
+    data = message.values["text"].split(" ")
+    if len(data) > 2:
+        id = data[0]
+        teacher_id = data[len(data)-1]
+        separator = "_"
+        del data[0]
+        del data[len(data)-1]
+        title = separator.join(data)
+        if not isinstance(title, str):
+            await message.answer("Ви ввели непривильні дані. Спробуйте ще раз. Напишіть id предмета, нову назву предмета та id викладача /update_subject")
+    else:
+        await message.answer("Ви ввели непривильні дані. Спробуйте ще раз. Напишіть id предмета, нову назву предмета та id викладача /update_subject")
+
+    try: 
+        new_subject = (title, int(teacher_id), int(id))
+        sql = "UPDATE Subjects SET title = %s, id_teacher = %s WHERE subject_id = %s;"
+        my_cursor.execute(sql, new_subject)
+        db.mydb.commit() 
+    except:
+        await state.finish()
+        await message.answer("Щось пішло не так. Спробуйте ще раз /update_subject")
+        return
+    
+    if my_cursor.rowcount < 1:
+        await message.answer("Щось пішло не так. Спробуйте ще раз /update_subject")
+    else:
+        await message.answer(f"{title} успішно оновлен")
+    await state.finish()
+    return
+
+
+@dp.message_handler(commands='update_teacher')
+async def update_teacher_start(message: types.Message):
+    await Form.update_teacher.set()
+    teachers = get_teachers_with_all_info()
+    if teachers:
+        str = "Список викладачів:\n"
+        for teacher, i in zip(teachers, range(len(teachers))):
+            str += f"{teacher[0]}. {teacher[4]} {teacher[1]} {teacher[2]} {teacher[3]}\n"
+        str += "Впишіть id викладача. Після цього нік в телеграмі, номер телефону, email та ім'я"
+    else:
+        str = "Список викладачів пустий.\nДодайте викладачів до списку /add_teacher"
+    await message.answer(str)
+
+
+@dp.message_handler(state=Form.update_teacher)
+async def update_teacher(message: types.Message, state: FSMContext):
+    data = message.values["text"].split(" ")
+    if len(data) == 5:
+        id = data[0]
+        username_telegram = data[1]
+        phone_number = data[2]  
+        email = data[3]  
+        info = data[4]  
+        if not isinstance(id, int) and not isinstance(username_telegram, str):
+            await message.answer("Щось пішло не так. Спробуйте ще раз /update_teacher")
+    else:
+        await message.answer("Щось пішло не так. Спробуйте ще раз /update_teacher")
+
+    try:
+        new_teacher = (username_telegram, phone_number, email, info, id)
+        sql = "UPDATE Teachers SET username_telegram = %s, phone_number = %s, email = %s, info = %s WHERE id_teacher = %s"
+        my_cursor.execute(sql, new_teacher)  
+        db.mydb.commit() 
+        await state.finish()
+    except:
+        await state.finish()
+        await message.answer("Щось пішло не так. Спробуйте ще раз /update_teacher")
+        return
+    
+    if my_cursor.rowcount < 1:
+        await message.answer("Щось пішло не так. Спробуйте ще раз /update_teacher")
+    else:
+        await message.answer(f"{username_telegram} оновлен")
+    await state.finish()
+    return    
 
 
 @dp.message_handler(commands='delete_subject')
 async def delete_subject_start(message: types.Message):
-    try:
-        await Form.delete_subject.set()
-        await message.answer("""WRITE\nsubject's id""")
-
-    except Exception as e:
-        print(e)
-        await message.answer("Conversation Terminated✔")
-        return
+    await Form.delete_subject.set()
+    subjects = get_subjects_with_id()
+    str = "Список предметів:\n"
+    for subject, i in zip(subjects, range(len(subjects))):
+        str += f"{subject[0]}: {subject[1]}\n"
+    str += "Напишіть id предмета, що потрібно видалити"
+    await message.answer(str)
+    return 
 
 
 @dp.message_handler(state=Form.delete_subject)
 async def delete_subject(message: types.Message, state: FSMContext):
     data = message.values["text"].split(" ")
-    
-    try:
-        id = data[0]
-    except ValueError:
+    if len(data) == 1:
+        try:
+            id = int(data[0])
+        except:
+            await state.finish()
+            await message.answer("Id це число, йолопе. Спробуй ще раз /delete_subject")
+            return
+    else: 
         await state.finish()
-        print(ValueError)
-        await message.answer("sorry, you input wrong data type. please, try again")
+        await message.answer("Введи ОДНЕ ЧИСЛО - id. Спробуй ще раз /delete_subject")
         return
-
-    # if isinstance(title, str) and isinstance(teacher_id, int):
+        
     sql = "DELETE FROM Subjects WHERE subject_id = %s;"
-    my_cursor.execute(sql, (id,))  # Execute the query
+    my_cursor.execute(sql, (id,)) 
     db.mydb.commit() 
-    await state.finish()
     
-    # maybe should add some errors handle
     if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+        await message.answer("Такого Id немає в списку. Спробуй ще раз /delete_subject")
     else:
-        await message.answer(f"Subject correctly deleted")
+        await message.answer(f"Предмет видален")
+    await state.finish()
+    return
 
 
 @dp.message_handler(commands='delete_teacher')
 async def delete_teacher_start(message: types.Message):
-    try:
-        await Form.delete_teacher.set()
-        await message.answer("""WRITE\nteacher's id""")
-
-    except Exception as e:
-        print(e)
-        await message.answer("Conversation Terminated✔")
-        return
+    await Form.delete_teacher.set()
+    teachers = get_teachers_with_id()
+    str = "Список викладачів:\n"
+    for teacher, i in zip(teachers, range(len(teachers))):
+        str += f"{teacher[0]}: {teacher[1]}\n"
+    str += "Напишіть id викладача, що потрібно видалити\nЯкщо викладач викладає якийсь предмет - його видалити неможливо"
+    await message.answer(str)
+    return     
 
 
 @dp.message_handler(state=Form.delete_teacher)
 async def delete_teacher(message: types.Message, state: FSMContext):
     data = message.values["text"].split(" ")
-    try:
-        id = data[0]
-    except ValueError:
+    if len(data) == 1:
+        try: 
+            id = int(data[0])
+            sql = "DELETE FROM Teachers WHERE id_teacher = %s;"
+            my_cursor.execute(sql, (id,))  
+            db.mydb.commit()
+        except:
+            await state.finish()
+            await message.answer("Id це число, йолопе (або викладач викладає предмет). Спробуй ще раз /delete_teacher")
+            return
+    else: 
         await state.finish()
-        await message.answer("sorry, you input wrong data type. please, try again")
+        await message.answer("Введи ОДНЕ ЧИСЛО - id. Спробуй ще раз /delete_teacher")
         return
-
-    sql = "DELETE FROM Teachers WHERE id_teacher = %s;"
-    my_cursor.execute(sql, (id,))  # Execute the query
-    db.mydb.commit() 
-    await state.finish()
     
-    # maybe should add some errors handle
     if my_cursor.rowcount < 1:
-        await message.answer("Something went wrong, please try again")
+        await message.answer("Такого Id немає в списку. Спробу ще раз /delete_teacher")
     else:
-        await message.answer(f"Teacher deleted")
+        await message.answer(f"Вчитель видален")
+    await state.finish()
+    return
 
+
+def get_teachers():
+    my_cursor.execute("SELECT DISTINCT username_telegram FROM teachers;")
+    result = my_cursor.fetchall()
+
+    teachers = []
+    for teacher in result:
+        teachers.append(teacher[0])
+
+    return teachers
+
+def get_teachers_with_id():
+    my_cursor.execute("SELECT DISTINCT id_teacher, info FROM teachers;")
+    result = my_cursor.fetchall()
+
+    teachers = []
+    for teacher in result:
+        teachers.append((teacher[0], teacher[1]))
+
+    return teachers
+
+def get_teachers_with_all_info():
+    my_cursor.execute("SELECT * FROM teachers;")
+    result = my_cursor.fetchall()
+
+    teachers = []
+    for teacher in result:
+        teachers.append((teacher[0], teacher[1], teacher[2], teacher[3], teacher[4]))
+
+    return teachers
 
 def get_subjects():
     my_cursor.execute("SELECT DISTINCT title FROM subjects;")
@@ -229,6 +383,27 @@ def get_subjects():
 
     return subjects
 
+def get_subjects_with_id():
+    my_cursor.execute("SELECT DISTINCT subject_id, title FROM subjects;")
+    result = my_cursor.fetchall()
+
+    subjects = []
+    for subject in result:
+        subjects.append((subject[0], subject[1]))
+
+    return subjects
+
+def get_subjects_with_teachers():
+    my_cursor.execute("""SELECT subject_id, title, info
+        FROM `queue-bot-kpi`.`Subjects`
+        INNER JOIN `queue-bot-kpi`.`Teachers` ON Subjects.id_teacher = Teachers.id_teacher;""")
+    result = my_cursor.fetchall()
+
+    subjects = []
+    for subject in result:
+        subjects.append((subject[0], subject[1], subject[2]))
+
+    return subjects
 
 def get_subjects_with_queues():
     my_cursor.execute("""SELECT DISTINCT title FROM subjects
@@ -966,4 +1141,3 @@ if __name__ == '__main__':
 
     except Exception as error:
         print('Cause: {}'.format(error))
-
