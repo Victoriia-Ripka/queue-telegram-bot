@@ -22,9 +22,9 @@ commands:
 ✅ show_current_student(nearest_future) - dima
 ✅ next (queue to next student) - dima
 
-all_teachers
-all_subjects
-all_students
+✅ all_teachers - dima
+✅ all_subjects - dima
+✅ all_students - dima
 
 
 start, help, end, menu-->
