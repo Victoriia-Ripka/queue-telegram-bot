@@ -403,8 +403,10 @@ async def show_needed_queue(message: types.Message):
     await Form.show_queue_st.set()
     subjects_with_queues = get_subjects_with_queues()
 
+    str = ""
+
     if subjects_with_queues:
-        str = "Виберіть предмет, на який шукаєте чергу:\n"
+        str += "Виберіть предмет, на який шукаєте чергу:\n"
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             str += f"{i + 1}. {subject}\n"
         str += "\nЯкщо на ваш предмет ще немає черги, ви можете створити її командою /create_queue\n"
@@ -751,6 +753,8 @@ async def sign_in(message: types.Message):
 
     if exist_pos:
         max_pos = max(exist_pos)
+    else:
+        max_pos = 0
 
     """
     Заборонити запис раніше курентної позиції в активній черзі!!!
@@ -868,20 +872,16 @@ async def sign_out(message: types.Message):
             my_cursor.execute(get_queue_id, (subject,))
             id_queue = my_cursor.fetchone()[0]
 
-            check_sign_up = """SELECT *
+            check_sign_up = """SELECT position
                                FROM sign_ups
                                WHERE telegram_user_id = %s
                                AND id_queue = %s;
                                """
             my_cursor.execute(check_sign_up, (user_id, id_queue))
-            exists = bool(my_cursor.fetchone())
+            position = my_cursor.fetchone()
 
-            if exists:
-                get_position = """SELECT position FROM sign_ups
-                                  WHERE telegram_user_id = %s
-                                  AND id_queue = %s;"""
-                my_cursor.execute(get_position, (user_id, id_queue))
-                position = int(my_cursor.fetchone()[0])
+            if position:
+                position = position[0]
 
                 delete_sign_up = f"""DELETE FROM sign_ups
                                      WHERE position = {position} ;
