@@ -96,8 +96,8 @@ async def add_subject_start(message: types.Message):
 async def add_subject(message: types.Message, state: FSMContext):
     data = message.values["text"].split(" ")
     if len(data) >= 2:
-        teacher_id = int(data[len(data)-1])
-        separator = "_"
+        teacher_id = int(data[len(data) - 1])
+        separator = " "
         data.pop()
         title = separator.join(data)
         if not isinstance(teacher_id, int) or not isinstance(title, str):
