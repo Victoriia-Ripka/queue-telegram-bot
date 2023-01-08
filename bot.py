@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 my_cursor = db.mydb.cursor()
 
 active_subject = ''
-active_student = 1
+active_student = 0
 
 
 class Form(StatesGroup):
@@ -35,7 +35,6 @@ class Form(StatesGroup):
 
     show_queue_st = State()
     start_queue_st = State()
-    next_st = State()
 
 
 @dp.message_handler(commands="start")
@@ -480,14 +479,11 @@ def get_subjects_with_queues():
 
 
 def get_subject_id(subject=None):
-    global active_subject
-
-    if subject:
-        active_subject = subject
+    act_sb = subject if subject else active_subject
 
     query = f"""SELECT subject_id
                 FROM subjects
-                WHERE title = '{active_subject}';"""
+                WHERE title = '{act_sb}';"""
     my_cursor.execute(query)
 
     temp = my_cursor.fetchone()
@@ -646,7 +642,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
             db.mydb.commit()
             await message.answer(f"Черга на предмет {subject} була видалена")
         else:
-            await message.answer(f"Черга на предмет {subject} ще не створення."
+            await message.answer(f"Черга на предмет {subject} ще не створена."
                                  f" Ви можете сторити її командую /create_queue")
     else:
         await message.answer(f"Предмет за {subject} невідомий. Ви можете додати предмет командою /add_lesson")
@@ -674,105 +670,9 @@ async def show_needed_queue(message: types.Message):
     await message.answer(str)
 
 
-def fetch_queue(subject_id):
-    query = f"""SELECT position, username, firstname
-                FROM sign_ups
-                INNER JOIN students
-                ON sign_ups.telegram_user_id = students.telegram_user_id
-                AND id_queue = (SELECT id_queue FROM queues
-                                WHERE subject_id = {subject_id})
-                ORDER BY position;"""
-    my_cursor.execute(query)
-    queue = my_cursor.fetchall()
-
-    return queue
-
-
-
-
-def get_sign_up(subject=None, student=None):
-    act_sb = subject if subject else active_subject
-    act_st = student if student else active_student
-
-    queue = fetch_queue(get_subject_id(act_sb))
-
-    sign_up_str = ''
-    if queue:
-        for i, username, firstname in queue:
-            if i == act_st:
-                sign_up_str += f"🟢 Зараз здає <b>{firstname} ({username})</b>\nМісце в черзі: {i}\n\n"
-            if i == act_st + 1:
-                sign_up_str += f"Наступним здаватиме <i>{firstname} ({username})</i>\n"
-    else:
-        sign_up_str += 'Черга порожня або немає такого предмету.\n'
-    sign_up_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
-                   '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
-                   '\nВсі предмети: /all_subjects'
-
-    return sign_up_str
-
-
-def queue_to_str(queue):
-    queue_str = ''
-    if queue:
-        for i, username, firstname in queue:
-            queue_str += f"{i}. {firstname} ({username})\n"
-    else:
-        queue_str += 'Черга порожня або немає такого предмету.\n'
-    queue_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
-                 '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
-                 '\nВсі предмети: /all_subjects'
-
-    return queue_str
-
-
-def active_queue_to_str(queue):
-
-    queue_str = ''
-    if queue:
-        for i, username, firstname in queue:
-            if i == active_student:
-                queue_str += f"{i}. <b>{firstname} ({username})</b> 🟢\n"
-            elif i == active_student + 1:
-                queue_str += f"{i}. <i>{firstname} ({username}) — приготуватися</i>\n"
-            elif i < active_student:
-                queue_str += f"<del>{i}. {firstname} ({username})</del>\n"
-            else:
-                queue_str += f"{i}. {firstname} ({username})\n"
-        queue_str += '\nЧерга активна ☑️\n'
-    else:
-        queue_str += 'Черга порожня.\n'
-    queue_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
-                 '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
-                 '\nВсі предмети: /all_subjects'
-
-    return queue_str
-
-
-def add_user(user):
-    user_id = user.id
-    name = user.first_name
-    if user.username:
-        username = '@' + user.username
-    else:
-        username = None
-
-    # Записуємо користувача в базу, якщо його немає
-    get_user = "SELECT * FROM students WHERE telegram_user_id = %s"
-    my_cursor.execute(get_user, (user_id,))
-    exists = my_cursor.fetchone()
-
-    if not exists:
-        put_user = "INSERT INTO students VALUES(%s, %s, %s)"
-        my_cursor.execute(put_user, (user_id, username, name))
-        db.mydb.commit()
-    return
-
-
 @dp.message_handler(state=Form.show_queue_st)
 async def show_needed_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
-
 
     data = message.values["text"]
     try:
@@ -792,8 +692,157 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
 
     await message.answer(queue_str)
 
+    print(active_subject)
+
     await state.finish()
 
+    return
+
+
+def fetch_queue(subject_id):
+    query = f"""SELECT position, username, firstname
+                FROM sign_ups
+                INNER JOIN students
+                ON sign_ups.telegram_user_id = students.telegram_user_id
+                AND id_queue = (SELECT id_queue FROM queues
+                                WHERE subject_id = {subject_id})
+                ORDER BY position;"""
+    my_cursor.execute(query)
+    queue = my_cursor.fetchall()
+
+    return queue
+
+
+def get_sign_up(subject=None, student=None):
+    act_sb = subject if subject else active_subject
+    act_st = student if student else active_student
+
+    queue = fetch_queue(get_subject_id(act_sb))
+
+    sign_up_str = ''
+    if queue:
+        positions = tuple(map(lambda x: x[0], queue))
+
+        if act_st is not positions[-1] + 1:
+            while act_st not in positions:
+                act_st += 1
+
+            next_st = act_st + 1
+            if act_st is not positions[-1]:
+                while next_st not in positions:
+                    next_st += 1
+
+            for i, username, firstname in queue:
+                if i == act_st:
+                    if username:
+                        sign_up_str += f"🟢 Зараз здає <b>{firstname} ({username})</b>\nМісце в черзі: {i}\n"
+                    else:
+                        sign_up_str += f"🟢 Зараз здає <b>{firstname}</b>\nМісце в черзі: {i}\n"
+                if i == next_st:
+                    if username:
+                        sign_up_str += f"\nНаступним здаватиме <i>{firstname} ({username})</i>\n"
+                    else:
+                        sign_up_str += f"\nНаступним здаватиме <i>{firstname}</i>\n"
+        else:
+            sign_up_str += 'Запис відсутній'
+    else:
+        sign_up_str += 'Черга порожня або її не існує.\n'
+    sign_up_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
+                   '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
+                   '\nВсі предмети: /all_subjects'
+
+    return sign_up_str
+
+
+def queue_to_str(queue):
+    queue_str = ''
+    if queue:
+        for i, username, firstname in queue:
+            if username:
+                queue_str += f"{i}. {firstname} ({username})\n"
+            else:
+                queue_str += f"{i}. {firstname}\n"
+    else:
+        queue_str += 'Черга порожня або її не існує.\n'
+    queue_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
+                 '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
+                 '\nВсі предмети: /all_subjects'
+
+    return queue_str
+
+
+def active_queue_to_str(queue):
+    global active_student
+
+    queue_str = ''
+    if queue:
+        positions = tuple(map(lambda x: x[0], queue))
+
+        if active_student is not positions[-1] + 1:
+            while active_student not in positions:
+                active_student += 1
+
+            next_student = active_student + 1
+            if active_student is not positions[-1]:
+                while next_student not in positions:
+                    next_student += 1
+
+            for i, username, firstname in queue:
+                if i is active_student:
+                    if username:
+                        queue_str += f"{i}. <b>{firstname} (@{username})</b> 🟢\n"
+                    else:
+                        queue_str += f"{i}. <b>{firstname}</b> 🟢\n"
+                elif i is next_student:
+                    if username:
+                        queue_str += f"{i}. <i>{firstname} (@{username}) — приготуватися</i>\n"
+                    else:
+                        queue_str += f"{i}. <i>{firstname} — приготуватися</i>\n"
+                elif i < active_student:
+                    if username:
+                        queue_str += f"<del>{i}. {firstname} ({username})</del>\n"
+                    else:
+                        queue_str += f"<del>{i}. {firstname}</del>\n"
+                else:
+                    if username:
+                        queue_str += f"{i}. {firstname} ({username})\n"
+                    else:
+                        queue_str += f"{i}. {firstname}\n"
+            queue_str += '\nЧерга активна ☑\n'
+        else:
+            for i, username, firstname in queue:
+                if username:
+                    queue_str += f"<del>{i}. {firstname} ({username})</del>\n"
+                else:
+                    queue_str += f"<del>{i}. {firstname}</del>\n"
+            queue_str += '\nЧерга закінчена 🔚\n'
+
+            global active_subject
+            active_subject = ''
+    else:
+        queue_str += 'Черга порожня\n'
+    queue_str += '\nЗаписатися в чергу: /sign_in <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
+                 '\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>' \
+                 '\nВидалити чергу: /delete_queue' \
+                 '\nВсі предмети: /all_subjects'
+
+    return queue_str
+
+
+def add_user(user):
+    user_id = user.id
+    name = user.first_name
+    username = user.username if user.username else None
+
+    # Записуємо користувача в базу, якщо його немає
+    get_user = "SELECT * FROM students WHERE telegram_user_id = %s"
+    my_cursor.execute(get_user, (user_id,))
+    exists = my_cursor.fetchone()
+
+    if not exists:
+        put_user = "INSERT INTO students VALUES(%s, %s, %s)"
+        my_cursor.execute(put_user, (user_id, username, name))
+        db.mydb.commit()
     return
 
 
@@ -819,6 +868,8 @@ async def start_queue(message: types.Message):
 async def start_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
     global active_subject
+    global active_student
+    active_student = 1
 
     data = message.values["text"]
     try:
@@ -846,10 +897,13 @@ async def start_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='next')
 async def next(message: types.Message):
-    # await Form.next_st.set()
 
     global active_student
-    active_student += 1
+    if not active_student or not active_subject:
+        await message.answer('Жодна черга не активна\n\nСпочатку розпочніть якусь чергу командою /start_queue')
+        return
+    else:
+        active_student += 1
 
     queue_str = active_queue_to_str(fetch_queue(get_subject_id()))
 
