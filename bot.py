@@ -19,6 +19,8 @@ my_cursor = db.mydb.cursor()
 active_subject = ''
 active_student = 1
 
+max_in_queue = 40
+
 
 class Form(StatesGroup):
     subject = State()
@@ -924,10 +926,31 @@ async def all_students(message: types.Message):
     return
 
 
+@dp.message_handler(commands='set_max')
+async def set_max(message: types.Message):
+    arguments = message.get_args()
+
+    try:
+        number = int(arguments)
+    except ValueError:
+        await message.answer("Щоб виставити максимальну довжину черги необхідно вказати число більше 0."
+                             "\nНаприклад /set_max 30")
+        return
+
+    if number < 1:
+        await message.answer("Мінімальна довжина черги - 1 студент.")
+        return
+
+    global max_in_queue
+    max_in_queue = number
+
+    await message.answer(f"Максимальна довжина черги тепер {number}")
+    return
+
 def get_first_free_pos(positions):
     if not positions:
         return 1
-    for i in range(active_student, 25):  # зробити адаптивним максимальну кількість
+    for i in range(active_student, max_in_queue):  # зробити адаптивним максимальну кількість
         if i not in positions:
             return i
 
@@ -984,18 +1007,10 @@ async def sign_in(message: types.Message):
     exist_pos = my_cursor.fetchall()
     exist_pos = tuple(map(lambda x: x[0], exist_pos))
 
-    if exist_pos and len(exist_pos) == 1:
-        max_pos = exist_pos[0]
-
     if exist_pos:
         max_pos = max(exist_pos)
     else:
         max_pos = 0
-
-    """
-    Заборонити запис раніше курентної позиції в активній черзі!!!
-    Дозволити повторно реєструватись людям на "доздачу"
-    """
 
     if max_pos > active_student:
         await message.answer(f"Ви вже записані в цю чергу під номером {exist_pos[0]}. Якщо бажаєте змінити позицію, то"
@@ -1029,8 +1044,8 @@ async def sign_in(message: types.Message):
                                  "\nНаприклад /sign_in Математика 5")
             return
 
-        if position < 0 or position > 25:  # !!!Додати можливість зміни максимальної кількості
-            await message.answer("Помилка. Максимальний номер у черзі 25")
+        if position < 0 or position > max_in_queue:  # !!!Додати можливість зміни максимальної кількості
+            await message.answer(f"Помилка. Максимальний номер у черзі {max_in_queue}")
             return
 
         if position <= active_student:
