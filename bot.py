@@ -332,8 +332,9 @@ async def update_teacher_start(message: types.Message):
         for teacher, i in zip(teachers, range(len(teachers))):
             str += f'{teacher[0]}. {teacher[1]}\nТелеграм: {teacher[2]}\n' \
                    f'Номер телефону: {teacher[3]}\nEmail: {teacher[4]}\n'
-        str += '📝 Введіть номер викладача зі списку' \
-               'Після цього ім\'я, нік в телеграмі, номер телефону та email. Якщо якоїсь інформації немає, поставте "-"'
+        str += '\n📝 Введіть номер викладача зі списку' \
+               '\n\nПісля цього ім\'я, нік в телеграмі, номер телефону та email.' \
+               'Якщо якоїсь інформації немає, поставте "-"'
     else:
         str = '🫥 Список викладачів порожній. Спочатку додайте викладачів до списку'
         str += '\n\nДодати викладача: /add_teacher'
@@ -342,13 +343,13 @@ async def update_teacher_start(message: types.Message):
 
 @dp.message_handler(state=Form.update_teacher)
 async def update_teacher(message: types.Message, state: FSMContext):
-    data = message.values['text'].split(' ')
+    data = message.values['text'].split(', ')
     if len(data) == 5:
         id = data[0]
         name = data[1]
         username_telegram = data[2]
         phone_number = data[3]
-        email = data[4]  
+        email = data[4]
         if not isinstance(id, int) and not isinstance(username_telegram, str):
             await message.answer('Щось пішло не так. Спробуйте ще раз /update_teacher')
     else:
@@ -1149,7 +1150,7 @@ async def sign_up(message: types.Message):
 
     if max_pos > active_student:
         await message.answer(f'📃 {user.first_name} вже записаний(-а) в цю чергу на місце {exist_pos[0]}'
-                             f'\n\n☝ Щоб перезаписатися на інше місце, спочатку випишіться з черги,'
+                             f'\n\n☝ Щоб перезаписатися на інше місце, спочатку випишіться з черги, '
                              f'а тоді запишіться заново'
                              '\n\nВиписатися з черги: /sign_out <i>{номер або назва предмета}</i>')
         return
@@ -1188,7 +1189,9 @@ async def sign_up(message: types.Message):
             return
 
         if position <= active_student:
-            await message.answer(f'🏃‍♂ Черга вже пройшла місце {position}\n\n⤵ Запишіться на місце попереду!')
+            await message.answer(f'🏃‍♂ Черга вже пройшла місце {position}. '
+                                 f'Зараз здає студент на позиції {active_student}\n\n'
+                                 f'⤵ Запишіться на місце попереду!')
             return
 
         # Перевірка, чи є вже на цьому місці записаний студент
