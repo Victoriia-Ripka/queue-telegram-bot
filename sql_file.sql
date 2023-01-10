@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
 		ON DELETE NO ACTION
 		ON UPDATE CASCADE
 )
-    ENGINE = InnoDB;
+ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
     UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
     UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE
 )
-    ENGINE = InnoDB;
+ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
             ON DELETE CASCADE
             ON UPDATE CASCADE
 )
-    ENGINE = InnoDB;
+ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
             ON DELETE NO ACTION
             ON UPDATE NO ACTION
 )
-    ENGINE = InnoDB;
+ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
     UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
     UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
     UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE
-    )
+)
 ENGINE = InnoDB;
 
 
