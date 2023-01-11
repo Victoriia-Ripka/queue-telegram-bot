@@ -73,8 +73,8 @@ def create_tables():
                        UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
                        UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
                        CONSTRAINT `fk_id_teacher`
-                   		FOREIGN KEY (`id_teacher`)
-                           REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
+                   	       FOREIGN KEY (`id_teacher`)
+                               REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
                    		ON DELETE NO ACTION
                    		ON UPDATE CASCADE
                    )
@@ -147,9 +147,7 @@ def create_tables():
                        `email`             VARCHAR(60)   NULL,
                        `info`              TEXT(1000)    NULL,
                        PRIMARY KEY (`id_teacher`),
-                       UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
-                       UNIQUE INDEX `phone_number_UNIQUE` (`phone_number` ASC) VISIBLE,
-                       UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE
+                       UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE
                    )
                    ENGINE = InnoDB;"""
         my_cursor.execute(query)

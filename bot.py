@@ -106,6 +106,10 @@ async def add_subject(message: types.Message, state: FSMContext):
     teachers = get_teachers()
 
     data = message.values['text'].split(' ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) >= 2:
         try:
             teacher_number = int(data[-1])
@@ -161,6 +165,10 @@ async def add_teacher_start(message: types.Message):
 @dp.message_handler(state=Form.teacher)
 async def add_teacher(message: types.Message, state: FSMContext):
     data = message.values['text'].split(', ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) == 1:
         name = data[0]
         if not all(x.isalpha() or x.isspace() for x in name):
@@ -237,6 +245,10 @@ async def add_teacher_info_start(message: types.Message):
 @dp.message_handler(state=Form.info)
 async def add_teacher_info(message: types.Message, state: FSMContext):
     data = message.values['text'].split(' ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) >= 2:
         try:
             id = int(data[0])
@@ -292,6 +304,10 @@ async def update_subject_start(message: types.Message):
 @dp.message_handler(state=Form.update_subject)
 async def update_subject(message: types.Message, state: FSMContext):
     data = message.values['text'].split(' ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) > 2:
         id = data[0]
         teacher_id = data[len(data)-1]
@@ -331,16 +347,20 @@ async def update_subject(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='update_teacher')
 async def update_teacher_start(message: types.Message):
-    await Form.update_teacher.set()
     teachers = get_teachers_with_all_info()
     if teachers:
+        await Form.update_teacher.set()
         str = '👩‍🏫 Список викладачів:\n'
-        for teacher, i in zip(teachers, range(len(teachers))):
-            str += f'{i + 1}. {teacher[1]}\nТелеграм: {teacher[2]}\n' \
-                   f'Номер телефону: {teacher[3]}\nEmail: {teacher[4]}\n'
-        str += '\n📝 Введіть номер викладача зі списку. ' \
-               'Після цього ім\'я, нік в телеграмі, номер телефону та email. Все через кому. ' \
-               'Якщо якоїсь інформації немає, поставте "-"'
+        for number, name, username_telegram, phone_number, email, info in teachers:
+            username_telegram = username_telegram if username_telegram else 'немає'
+            phone_number = phone_number if phone_number else 'немає'
+            email = email if email else 'немає'
+            str += f'\n{number}. {name}\nТелеграм: {username_telegram}\n' \
+                   f'Номер телефону: {phone_number}\nEmail: {email}\n'
+        str += '\n📝 Введіть номер викладача зі списку, ' \
+               'після цього ім\'я, нік в телеграмі, номер телефону та email. Все через кому. ' \
+               'Якщо якоїсь інформації немає, поставте "-"' \
+               '\nНаприклад: Коваленко Іван Андрійович, -, +380000000000, -'
     else:
         str = '🫥 Список викладачів порожній. Спочатку додайте викладачів до списку'
         str += '\n\nДодати викладача: /add_teacher'
@@ -350,13 +370,16 @@ async def update_teacher_start(message: types.Message):
 @dp.message_handler(state=Form.update_teacher)
 async def update_teacher(message: types.Message, state: FSMContext):
     data = message.values['text'].split(', ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) == 5:
         number = data[0]
         name = data[1]
-
-        username_telegram = data[2] if data[2] != '-' else 'username_telegram'
-        phone_number = data[3] if data[3] != '-' else 'phone_number'
-        email = data[4] if data[4] != '-' else 'email'
+        username_telegram = data[2] if data[2] != '-' else None
+        phone_number = data[3] if data[3] != '-' else None
+        email = data[4] if data[4] != '-' else None
     else:
         await state.finish()
         await message.answer('🗿 Ви ввели неправильну кількість параметрів. Необхідно 5 параметрів:'
@@ -375,6 +398,10 @@ async def update_teacher(message: types.Message, state: FSMContext):
 
     name_from_db = get_teachers()[number - 1]
     teacher_id = get_teacher_id(name_from_db)
+
+    if username_telegram and username_telegram[0] != '@':
+        username_telegram = '@' + username_telegram
+
     new_teacher_info = (name, username_telegram, phone_number, email, teacher_id)
     try:
         sql = """UPDATE teachers
@@ -410,6 +437,10 @@ async def delete_subject_start(message: types.Message):
 @dp.message_handler(state=Form.delete_subject)
 async def delete_subject(message: types.Message, state: FSMContext):
     data = message.values['text'].split(' ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) == 1:
         try:
             id = int(data[0])
@@ -452,6 +483,10 @@ async def delete_teacher_start(message: types.Message):
 @dp.message_handler(state=Form.delete_teacher)
 async def delete_teacher(message: types.Message, state: FSMContext):
     data = message.values['text'].split(' ')
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     if len(data) == 1:
         try:
             id = int(data[0])
@@ -511,13 +546,13 @@ def get_teachers_with_id():
 
 
 def get_teachers_with_all_info():
-    my_cursor.execute('SELECT * FROM teachers;')
+    my_cursor.execute('SELECT `name`, `username_telegram`, `phone_number`, `email`, `info` FROM teachers;')
     result = my_cursor.fetchall()
 
     teachers = []
     i = 1
     for teacher in result:
-        teachers.append((i, teacher[1], teacher[2], teacher[3], teacher[4], teacher[5]))
+        teachers.append((i, teacher[0], teacher[1], teacher[2], teacher[3], teacher[4]))
         i += 1
 
     return teachers
@@ -614,6 +649,10 @@ async def create_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
 
     #  Вибір предмета відбувається написання назвою або номером
     try:  # Спроба конвертації користувацького вводу як інтове число. Якщо не виходить - сприймаємо як назву
@@ -668,6 +707,10 @@ async def clear_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
 
     try:
         data = int(data)
@@ -727,6 +770,10 @@ async def delete_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
 
     try:
         data = int(data)
@@ -795,6 +842,10 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     try:
         data = int(data)
     except ValueError:
@@ -991,6 +1042,10 @@ async def start_queue(message: types.Message, state: FSMContext):
     active_student = 1
 
     data = message.values['text']
+    if message.values['text'] == '/back':
+        await state.finish()
+        await message.answer('🔙 Повернуто в головне меню')
+        return
     try:
         data = int(data)
     except ValueError:
@@ -1048,8 +1103,13 @@ async def all_teachers(message: types.Message):
     if teachers:
         i = 1
         for name, username, phone, email, info, subject in teachers:
-            all_teachers_str += f'\n{i}. ПІБ: {name}\nТелеграм: {username}\nНомер телефону: {phone}\n' \
-                                f'Ел. пошта: {email}\nІнформація: {info}\nВикладає: {subject}\n'
+            username = username if username else 'немає'
+            phone = phone if phone else 'немає'
+            email = email if email else 'немає'
+            info = info if info else 'немає'
+            subject = subject if subject else 'нічого'
+            all_teachers_str += f'\n{i}. {name}\nТелеграм: {username}\nНомер телефону: {phone}\n' \
+                                f'Ел. пошта: {email}\nВикладає: {subject}\nІнформація: {info}\n'
             i += 1
     else:
         all_teachers_str += '🫥 Список викладачів порожній\n'
