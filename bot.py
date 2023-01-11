@@ -91,8 +91,8 @@ async def add_subject_start(message: types.Message):
         str += '\n👩‍🏫 Список викладачів:\n'
         for teacher, i in zip(teachers, range(len(teachers))):
             str += f'{i + 1}. {teacher}\n'
-        str += '\n📝 Напишіть назву предмета, який хочете додати, і номер викладача зі списку. ' \
-               '👉 Наприклад: Алгоритмізація 4'
+        str += '\n📝 Напишіть назву предмета, який хочете додати, і номер викладача зі списку через пробіл' \
+               '\n👉 Наприклад: Алгоритмізація 4'
     else:
         str += '🫥 Список викладачів порожній\nСпочатку додайте викладачів, щоб додавати предмети!'
         str += '\n\nДодати викладача: /add_teacher'
@@ -290,15 +290,16 @@ async def update_subject_start(message: types.Message):
     subjects = get_subjects_with_teachers()
     if subjects:
         await Form.update_subject.set()
-        str = '📚 Список існуючих предметів:\n'
+        str = '📚 Список існуючих предметів:\n\n'
         for subject, i in zip(subjects, range(len(subjects))):
             str += f'{subject[0]}. {subject[1]} - {subject[2]}\n'
         
         teachers = get_teachers()
-        str += '👩‍🏫 Список доданих викладачів:\n'
+        str += '\n👩‍🏫 Список доданих викладачів:\n'
         for teacher, i in zip(teachers, range(len(teachers))):
             str += f'{i + 1}: {teacher}\n'
-        str += '\n📝 Введіть номер предмета зі списку, нову назву предмета та номер викладача зі списку'
+        str += '\n📝 Введіть номер предмета зі списку, нову назву предмета та номер викладача зі списку через пробіл' \
+               '\n👉 Наприклад: 3 Алгоритми і структури даних 5'
     else:
         str = '🫥 Список предметів порожній. Спочатку додайте предмет\n\nДодати предмет: /add_subject'
     await message.answer(str)
@@ -315,7 +316,7 @@ async def update_subject(message: types.Message, state: FSMContext):
     if len(data) > 2:
         id = data[0]
         teacher_id = data[len(data)-1]
-        separator = '_'
+        separator = ' '
         del data[0]
         del data[len(data)-1]
         title = separator.join(data)
@@ -620,10 +621,10 @@ def get_subjects_with_queues():
 def get_subject_id(subject=None):
     act_sb = subject if subject else active_subject
 
-    query = f"""SELECT subject_id
-                FROM subjects
-                WHERE title = '{act_sb}';"""
-    my_cursor.execute(query)
+    query = """SELECT subject_id  # неможливо скористатися f-стрічкою через предмети, що мають у назві апостроф
+               FROM subjects
+               WHERE title = %s;"""
+    my_cursor.execute(query, (act_sb,))
 
     temp = my_cursor.fetchone()
 
@@ -1097,7 +1098,6 @@ async def show_current_student(message: types.Message):
 @dp.message_handler(commands='all_teachers')
 async def all_teachers(message: types.Message):
     teachers = get_teachers_with_all_info()
-    print(teachers)
     teachers_lists = []
     for teacher in teachers:
         teacher_id = get_teacher_id(teacher[1])
@@ -1106,7 +1106,6 @@ async def all_teachers(message: types.Message):
                   WHERE id_teacher = {teacher_id};"""
         my_cursor.execute(sql)
         temp = my_cursor.fetchall()
-        print(temp)
 
         teacher_subjects = []
         for subject in temp:
@@ -1116,7 +1115,6 @@ async def all_teachers(message: types.Message):
         lst_teacher = list(teacher)
         lst_teacher.append(teacher_subjects)
         teachers_lists.append(lst_teacher)
-    print(teachers_lists)
 
     all_teachers_str = '👩‍🏫 Список усіх викладачів:\n'
     if teachers:
@@ -1248,7 +1246,7 @@ async def sign_up(message: types.Message):
         return
 
     if subject not in sub_with_queue:
-        await message.answer(f'Предмет {subject} не має черги\n\nДодати предмет: /add_subject')
+        await message.answer(f'🫥 Предмет {subject} не має черги\n\nСтворити чергу: /create_queue')
         return
 
     check_stundent = """SELECT su.position
