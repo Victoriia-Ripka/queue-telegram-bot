@@ -1438,7 +1438,7 @@ if __name__ == '__main__':
         print('All tables are ready')
         print('\n\033[1mBOT STARTED\n\033[0m')
 
-        my_cursor = db.my_cursor
+        my_cursor = db.my_cursor  # переприсвоєння в головному модулі, щоб кожен раз не звертатися до модуля db
         executor.start_polling(dp, skip_updates=True)
 
     except Exception as error:
