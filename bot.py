@@ -92,7 +92,7 @@ async def add_subject_start(message: types.Message):
         for teacher, i in zip(teachers, range(len(teachers))):
             str += f'{i + 1}. {teacher}\n'
         str += '\n📝 Напишіть назву предмета, який хочете додати, і номер викладача зі списку. ' \
-               'Наприклад: Алгоритмізація 4'
+               '👉 Наприклад: Алгоритмізація 4'
     else:
         str += '🫥 Список викладачів порожній\nСпочатку додайте викладачів, щоб додавати предмети!'
         str += '\n\nДодати викладача: /add_teacher'
@@ -139,10 +139,14 @@ async def add_subject(message: types.Message, state: FSMContext):
     my_cursor.execute(sql, new_subject)
     db.mydb.commit()
 
+    sql = f'SELECT name FROM teachers WHERE id_teacher = {teacher_id};'
+    my_cursor.execute(sql)
+    teacher_name = my_cursor.fetchone()[0]
+
     if my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
     else:
-        await message.answer(f'✅ Предмет {title} додано до списку')
+        await message.answer(f'✅ Предмет {title} викладача {teacher_name} додано до списку')
     await state.finish()
     return       
     
@@ -171,7 +175,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
         return
     if len(data) == 1:
         name = data[0]
-        if not all(x.isalpha() or x.isspace() for x in name):
+        if not all(x.isalpha() or x.isspace() or x == '-' for x in name):
             await state.finish()
             await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
             return
@@ -235,7 +239,7 @@ async def add_teacher_info_start(message: types.Message):
         str = '👩‍🏫 Список викладачів:\n'
         for teacher, i in zip(teachers, range(len(teachers))):
             str += f'{i + 1}. {teacher}\n'
-        str += '\n1️⃣ Введіть номер викладача із списку\n\nПісля цього додайте всю необхідну інформацію'
+        str += '\n📝 Введіть номер викладача із списку, після чого через кому додайте всю необхідну інформацію'
     else:
         str = '🫥 Список викладачів порожній. Спочатку додайте викладача'
         str += '\n\nДодати інформацію про викладача: /add_teacher_info'
@@ -244,7 +248,7 @@ async def add_teacher_info_start(message: types.Message):
 
 @dp.message_handler(state=Form.info)
 async def add_teacher_info(message: types.Message, state: FSMContext):
-    data = message.values['text'].split(' ')
+    data = message.values['text'].split(', ')
     if message.values['text'] == '/back':
         await state.finish()
         await message.answer('🔙 Повернуто в головне меню')
@@ -330,7 +334,8 @@ async def update_subject(message: types.Message, state: FSMContext):
         new_subject = (title, int(teacher_id), int(id))
     except ValueError:
         await state.finish()
-        await message.answer('Щось пішло не так. Спробуйте ще раз /update_subject')
+        await message.answer('1️⃣ Номери предмета і викладача повинні бути числами'
+                             '\n\nСпробувати ще раз: /update_subject')
         return
     else:
         sql = 'UPDATE subjects SET title = %s, id_teacher = %s WHERE subject_id = %s;'
@@ -360,7 +365,7 @@ async def update_teacher_start(message: types.Message):
         str += '\n📝 Введіть номер викладача зі списку, ' \
                'після цього ім\'я, нік в телеграмі, номер телефону та email. Все через кому. ' \
                'Якщо якоїсь інформації немає, поставте "-"' \
-               '\nНаприклад: Коваленко Іван Андрійович, -, +380000000000, -'
+               '\n👉 Наприклад: Коваленко Іван Андрійович, -, +380000000000, -'
     else:
         str = '🫥 Список викладачів порожній. Спочатку додайте викладачів до списку'
         str += '\n\nДодати викладача: /add_teacher'
@@ -522,10 +527,10 @@ def get_teachers():
     return teachers
 
 
-def get_teacher_id(teacher):
+def get_teacher_id(teacher_name):
     query = f"""SELECT id_teacher
                 FROM teachers
-                WHERE name = '{teacher}';"""
+                WHERE name = '{teacher_name}';"""
     my_cursor.execute(query)
     teacher_id = int(my_cursor.fetchone()[0])
 
@@ -695,9 +700,10 @@ async def clear_queue(message: types.Message):
         str = '📚 Список усіх предметів, на які існують черги:\n'
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             str += f'{i + 1}. {subject}\n'
+        str += '\n📝 Введіть номер предмета, на який бажаєте очистити чергу'
     else:
         str = '🫥 Список предметів з чергами порожній' \
-              '\n\nДодати предмет: /add_subject\nСтворити чергу на предмет: /create_queue'
+              '\n\nСтворити чергу на предмет: /create_queue\nДодати предмет: /add_subject'
     await message.answer(str)
 
 
@@ -718,7 +724,7 @@ async def clear_queue(message: types.Message, state: FSMContext):
         subject = data
     else:
         if 0 < data <= len(subjects):
-            subject = subjects[data - 1]
+            subject = subjects_with_queues[data - 1]
         else:
             await message.answer(f'❓ Предмет за номером {data} невідомий'
                                  f'\n\nДодати предмет: /add_subject')
@@ -1090,27 +1096,38 @@ async def show_current_student(message: types.Message):
 
 @dp.message_handler(commands='all_teachers')
 async def all_teachers(message: types.Message):
-    query = """SELECT teachers.name, teachers.username_telegram, teachers.phone_number,
-               teachers.email, teachers.info, subjects.title
-               FROM teachers
-               LEFT OUTER JOIN subjects
-                   USING (id_teacher)   
-               ORDER BY id_teacher;"""
-    my_cursor.execute(query)
-    teachers = my_cursor.fetchall()
+    teachers = get_teachers_with_all_info()
+    print(teachers)
+    teachers_lists = []
+    for teacher in teachers:
+        teacher_id = get_teacher_id(teacher[1])
+
+        sql = f"""SELECT title FROM subjects
+                  WHERE id_teacher = {teacher_id};"""
+        my_cursor.execute(sql)
+        temp = my_cursor.fetchall()
+        print(temp)
+
+        teacher_subjects = []
+        for subject in temp:
+            teacher_subjects.append(subject[0])
+        teacher_subjects = ', '.join(teacher_subjects)
+
+        lst_teacher = list(teacher)
+        lst_teacher.append(teacher_subjects)
+        teachers_lists.append(lst_teacher)
+    print(teachers_lists)
 
     all_teachers_str = '👩‍🏫 Список усіх викладачів:\n'
     if teachers:
-        i = 1
-        for name, username, phone, email, info, subject in teachers:
+        for number, name, username, phone, email, info, subjects in teachers_lists:
             username = username if username else 'немає'
             phone = phone if phone else 'немає'
             email = email if email else 'немає'
             info = info if info else 'немає'
-            subject = subject if subject else 'нічого'
-            all_teachers_str += f'\n{i}. {name}\nТелеграм: {username}\nНомер телефону: {phone}\n' \
-                                f'Ел. пошта: {email}\nВикладає: {subject}\nІнформація: {info}\n'
-            i += 1
+            subjects = subjects if subjects else 'нічого'
+            all_teachers_str += f'\n{number}. {name}\nТелеграм: {username}\nНомер телефону: {phone}\n' \
+                                f'Ел. пошта: {email}\nВикладає: {subjects}\nІнформація: {info}\n'
     else:
         all_teachers_str += '🫥 Список викладачів порожній\n'
     all_teachers_str += '\nДодати викладача: /add_teacher'
