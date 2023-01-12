@@ -50,7 +50,30 @@ class Form(StatesGroup):
 
 @dp.message_handler(commands='help')
 async def help(message: types.Message):
-    text = 'all commands definitions will be here soon'
+    text = '🤖 Всі команди бота <b>Q Bot KPI</b>:\n' \
+           '\n/help — вивести всі команди' \
+           '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
+           '\n/all_students — вивести всіх студентів' \
+           '\n/all_subjects — вивести всі предмети' \
+           '\n/all_teachers — вивести всіх викладачів' \
+           '\n/add_subject — додати предмет' \
+           '\n/add_teacher — додати викладача' \
+           '\n/add_teacher_info — додати або оновити додаткову інформацію про викладача' \
+           '\n/update_subject — оновити предмет' \
+           '\n/update_teacher — оновити викладача' \
+           '\n/delete_subject — видалити предмет' \
+           '\n/delete_teacher — видалити викладача' \
+           '\n/create_queue — створити чергу на предмет' \
+           '\n/clear_queue — очистити чергу на предмет' \
+           '\n/delete_queue — видалити чергу на предмет' \
+           '\n/show_needed_queue — вивести конкретну чергу' \
+           '\n/start_queue — розпочати чергу на предмет' \
+           '\n/next — здійснити рух черги' \
+           '\n/show_current_student — дізнатися, хто здає зараз' \
+           '\n/set_max <i>{число}</i> — встановити максимальну довжину черги' \
+           '\n/sign_in <i>{номер або назва предмету} {позиція в черзі (за бажанням)}</i> — ' \
+           'записатися в чергу на предмет' \
+           '\n/sign_out <i>{номер або назва предмету}</i> — виписатися з черги на предмет'
     await message.answer(text)
 
 
@@ -314,10 +337,10 @@ async def update_subject(message: types.Message, state: FSMContext):
         return
     if len(data) > 2:
         id = data[0]
-        teacher_id = data[len(data)-1]
+        teacher_id = data[-1]
         separator = ' '
         del data[0]
-        del data[len(data)-1]
+        del data[-1]
         title = separator.join(data)
         if not isinstance(title, str):
             await message.answer('☹ Ви ввели неправильні дані!\n\nНеобхідно ввести номер предмету зі списку, '
@@ -894,27 +917,31 @@ def fetch_queue(subject_id):
     return queue
 
 
-def get_sign_up(subject=None, student=None):
-    act_sb = subject if subject else active_subject
-    act_st = student if student else active_student
-
-    queue = fetch_queue(get_subject_id(act_sb))
+def get_sign_up(subject=active_subject, student=active_student):
+    # act_sb = subject if subject else active_subject
+    # act_st = student if student else active_student
 
     sign_up_str = ''
+    if not subject or not student:
+        sign_up_str += '🙄 Жодна черга не активна\n\nРозпочати чергу: /start_queue'
+        return sign_up_str
+
+    queue = fetch_queue(get_subject_id(subject))
+
     if queue:
         positions = tuple(map(lambda x: x[0], queue))
 
-        if act_st is not positions[-1] + 1:
-            while act_st not in positions:
-                act_st += 1
+        if student is not positions[-1] + 1:
+            while student not in positions:
+                student += 1
 
-            next_st = act_st + 1
-            if act_st is not positions[-1]:
+            next_st = student + 1
+            if student is not positions[-1]:
                 while next_st not in positions:
                     next_st += 1
 
             for i, username, firstname in queue:
-                if i == act_st:
+                if i == student:
                     if username:
                         sign_up_str += f'🟢 Зараз здає <b>{firstname} ({username})</b>\nМісце в черзі: {i}\n'
                     else:
@@ -1089,6 +1116,7 @@ async def next(message: types.Message):
     if queue and active_student is not positions[-1] + 1:
         # перевірка на наявність черги на вищому рівні за функцію active_queue_to_str()
         # потрібна для того, щоб запобігти нескінченному виконанню циклів while
+        # і убезпечитися від зміни активного студента
         end = False
 
         while active_student not in positions:
@@ -1101,10 +1129,13 @@ async def next(message: types.Message):
 
         queue_str = active_queue_to_str(queue, end, next_student)
     else:
+        if not queue:
+            active_student = 0
         end = True
         queue_str = active_queue_to_str(queue, end)
 
         active_subject = ''
+        active_student = 0
 
     await message.answer(queue_str)
 
