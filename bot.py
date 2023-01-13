@@ -281,18 +281,25 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
         return
     if len(data) >= 2:
         try:
-            id = int(data[0])
+            number = int(data[0])
         except ValueError:
             await state.finish()
             await message.answer('1️⃣  Першим повинен бути номер\n\nСпробувати ще раз: /add_teacher_info')
             return
         separator = ' '
         del data[0]
+
         info = separator.join(data)
-        # if not isinstance(info, str) or not isinstance(id, int):
-        #     await state.finish()
-        #     await message.answer('Щось пішло не так\n\nСпробувати ще раз: /add_teacher_info')
-        #     return
+        max_info_size = 1000
+        if len(info) > max_info_size:
+            await state.finish()
+            await message.answer(f'Завеликий об\'єм інформації! Введіть не більше {max_info_size} символів '
+                                 'включно з пробілами\n\nСпробувати ще раз: /add_teacher_info')
+            return
+
+        name = get_teachers()[number - 1]
+        id = get_teacher_id(name)
+
         new_info = (info, id)
         sql = 'UPDATE teachers SET info = %s WHERE id_teacher = %s;'
         db.my_cursor.execute(sql, new_info)
