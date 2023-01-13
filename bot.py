@@ -50,7 +50,7 @@ class Form(StatesGroup):
 
 @dp.message_handler(commands='help')
 async def help(message: types.Message):
-    text = '🤖 Всі команди бота <b>Q Bot KPI</b>:\n' \
+    text = '⚙ Всі команди бота <b>Q Bot KPI</b>:\n' \
            '\n/help — вивести всі команди' \
            '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
            '\n/all_students — вивести всіх студентів' \
@@ -127,10 +127,16 @@ async def add_subject(message: types.Message, state: FSMContext):
     teachers = get_teachers()
 
     data = message.values['text'].split(' ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     if len(data) >= 2:
         try:
             number = int(data[-1])
@@ -193,10 +199,16 @@ async def add_teacher_start(message: types.Message):
 @dp.message_handler(state=Form.teacher)
 async def add_teacher(message: types.Message, state: FSMContext):
     data = message.values['text'].split(', ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
 
     allowed_name_symbols = ('-', '.', "'")
     if len(data) == 1:
@@ -275,10 +287,16 @@ async def add_teacher_info_start(message: types.Message):
 @dp.message_handler(state=Form.info)
 async def add_teacher_info(message: types.Message, state: FSMContext):
     data = message.values['text'].split(', ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     if len(data) >= 2:
         try:
             number = int(data[0])
@@ -345,10 +363,16 @@ async def update_subject(message: types.Message, state: FSMContext):
     subjects = get_subjects()
     teachers = get_teachers()
     data = message.values['text'].split(' ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     if len(data) > 2:
         try:
             subject_number = int(data[0])
@@ -431,10 +455,16 @@ async def update_teacher_start(message: types.Message):
 async def update_teacher(message: types.Message, state: FSMContext):
     teachers = get_teachers()
     data = message.values['text'].split(', ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     if len(data) == 5:
         number = data[0]
         name = data[1]
@@ -505,10 +535,16 @@ async def delete_subject_start(message: types.Message):
 async def delete_subject(message: types.Message, state: FSMContext):
     subjects = get_subjects()
     data = message.values['text'].split(' ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     if len(data) == 1:
         try:
             number = int(data[0])
@@ -563,10 +599,16 @@ async def delete_teacher_start(message: types.Message):
 async def delete_teacher(message: types.Message, state: FSMContext):
     teachers = get_teachers()
     data = message.values['text'].split(' ')
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     if len(data) == 1:
         try:
             number = int(data[0])
@@ -677,7 +719,8 @@ def get_subjects_with_id():
 def get_subjects_with_teachers():
     db.my_cursor.execute("""SELECT subject_id, title, name
                          FROM `queue-bot-kpi`.`Subjects`
-                         INNER JOIN `queue-bot-kpi`.`Teachers` ON Subjects.id_teacher = Teachers.id_teacher;""")
+                         INNER JOIN `queue-bot-kpi`.`Teachers` ON Subjects.id_teacher = Teachers.id_teacher
+                         ORDER BY subject_id;""")
     result = db.my_cursor.fetchall()
 
     subjects = []
@@ -692,7 +735,8 @@ def get_subjects_with_teachers():
 def get_subjects_with_queues():
     db.my_cursor.execute("""SELECT DISTINCT title FROM subjects
                       WHERE subject_id IN
-                      (SELECT subject_id FROM queues);""")
+                      (SELECT subject_id FROM queues)
+                      ORDER BY subject_id;""")
     result = db.my_cursor.fetchall()
 
     subjects_with_queues = []
@@ -740,10 +784,16 @@ async def create_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
 
     #  Вибір предмету відбувається написання назвою або номером
     try:  # Спроба конвертації користувацького вводу як інтове число. Якщо не виходить - сприймаємо як назву
@@ -771,7 +821,7 @@ async def create_queue(message: types.Message, state: FSMContext):
             db.mydb.commit()
             await message.answer(f'✅ Чергу на предмет {subject} створено')
         else:
-            await message.answer(f'🫥 предмету {subject} немає у списку предметів'
+            await message.answer(f'🫥 Предмету {subject} немає у списку предметів'
                                  f'\n\nДодати предмет: /add_subject')
 
     await state.finish()
@@ -780,9 +830,9 @@ async def create_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='clear_queue')
 async def clear_queue(message: types.Message):
-    await Form.clear_queue_st.set()
     subjects_with_queues = get_subjects_with_queues()
     if subjects_with_queues:
+        await Form.clear_queue_st.set()
         str = '📚 Список усіх предметів, на які існують черги:\n'
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             str += f'{i + 1}. {subject}\n'
@@ -799,10 +849,16 @@ async def clear_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
 
     try:
         data = int(data)
@@ -862,10 +918,16 @@ async def delete_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
 
     try:
         data = int(data)
@@ -934,10 +996,16 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
     subjects_with_queues = get_subjects_with_queues()
 
     data = message.values['text']
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
     try:
         data = int(data)
     except ValueError:
@@ -1124,10 +1192,16 @@ async def start_queue(message: types.Message, state: FSMContext):
     global active_student
 
     data = message.values['text']
-    if message.values['text'] == '/back':
-        await state.finish()
-        await message.answer('🔙 Повернуто в головне меню')
-        return
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
 
     try:
         data = int(data)
@@ -1251,7 +1325,7 @@ async def all_subjects(message: types.Message):
                FROM subjects
                LEFT OUTER JOIN teachers
                    USING (id_teacher)
-               ORDER BY id_teacher"""
+               ORDER BY subject_id;"""
     db.my_cursor.execute(query)
     subjects = db.my_cursor.fetchall()
 
@@ -1271,7 +1345,8 @@ async def all_subjects(message: types.Message):
 
 @dp.message_handler(commands='all_students')
 async def all_students(message: types.Message):
-    query = """SELECT username, firstname FROM students;"""
+    query = """SELECT username, firstname FROM students
+               ORDER BY firstname;"""
     db.my_cursor.execute(query)
     students = db.my_cursor.fetchall()
 
