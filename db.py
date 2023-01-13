@@ -12,7 +12,6 @@ def connect_to_server():
             host='127.0.0.1',
             user='root',
             password=password,
-            database='queue-bot-kpi',
             auth_plugin='mysql_native_password'
         )
         my_cursor = mydb.cursor()
