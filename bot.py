@@ -71,7 +71,7 @@ async def help(message: types.Message):
            '\n/next — здійснити рух черги' \
            '\n/show_current_student — дізнатися, хто здає зараз' \
            '\n/set_max <i>{число}</i> — встановити максимальну довжину черги' \
-           '\n/sign_in <i>{номер або назва предмету} {позиція в черзі (за бажанням)}</i> — ' \
+           '\n/sign_up <i>{номер або назва предмету} {позиція в черзі (за бажанням)}</i> — ' \
            'записатися в чергу на предмет' \
            '\n/sign_out <i>{номер або назва предмету}</i> — виписатися з черги на предмет'
     await message.answer(text)
@@ -197,9 +197,11 @@ async def add_teacher(message: types.Message, state: FSMContext):
         await state.finish()
         await message.answer('🔙 Повернуто в головне меню')
         return
+
+    allowed_name_symbols = ('-', '.', "'")
     if len(data) == 1:
         name = data[0]
-        if not all(x.isalpha() or x.isspace() or x == '-' for x in name):
+        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
             await state.finish()
             await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
             return
@@ -210,7 +212,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
     elif len(data) == 2:
         name = data[0]
         username_telegram = data[1]
-        if not all(x.isalpha() or x.isspace() for x in name):
+        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
             await state.finish()
             await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
             return
@@ -222,7 +224,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
         name = data[0]
         username_telegram = data[1]
         phone_number = data[2]
-        if not all(x.isalpha() or x.isspace() for x in name):
+        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
             await state.finish()
             await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
             return
@@ -235,7 +237,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
         username_telegram = data[1]
         phone_number = data[2]
         email = data[3]
-        if not all(x.isalpha() or x.isspace() for x in name):
+        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
             await state.finish()
             await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
             return
@@ -833,10 +835,10 @@ async def clear_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_queue')
 async def delete_queue(message: types.Message):
-    await Form.delete_queue_st.set()
     subjects_with_queues = get_subjects_with_queues()
 
     if subjects_with_queues:
+        await Form.delete_queue_st.set()
         str = '📚 Список усіх предметів з чергами:\n'
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             str += f'{i + 1}. {subject}\n'
