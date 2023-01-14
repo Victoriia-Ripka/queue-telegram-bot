@@ -224,6 +224,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
     elif len(data) == 2:
         name = data[0]
         username_telegram = data[1]
+        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
         if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
             await state.finish()
             await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
@@ -235,6 +236,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
     elif len(data) == 3:
         name = data[0]
         username_telegram = data[1]
+        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
         phone_number = data[2]
         if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
             await state.finish()
@@ -247,6 +249,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
     elif len(data) == 4:
         name = data[0]
         username_telegram = data[1]
+        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
         phone_number = data[2]
         email = data[3]
         if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
@@ -311,7 +314,7 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
         max_info_size = 1000
         if len(info) > max_info_size:
             await state.finish()
-            await message.answer(f'Завеликий об\'єм інформації! Введіть не більше {max_info_size} символів '
+            await message.answer(f'🙆‍♀ Завеликий об\'єм інформації! Введіть не більше {max_info_size} символів '
                                  'включно з пробілами\n\nСпробувати ще раз: /add_teacher_info')
             return
 
@@ -440,7 +443,7 @@ async def update_teacher_start(message: types.Message):
         str += '\n📝 Введіть номер викладача зі списку, ' \
                'після цього ім\'я, нік в телеграмі, номер телефону та email. Все через кому. ' \
                'Якщо якоїсь інформації немає, поставте "-"' \
-               '\n👉 Наприклад: Коваленко Іван Андрійович, -, +380000000000, -' \
+               '\n👉 Наприклад: 2, Коваленко Іван Андрійович, -, +380000000000, -' \
                '\n\n☝ Якщо ви бажаєте оновити інформацію про викладача, скористайтесь для цього окремою командою. ' \
                'Щоб додати викладача до предмету, потрібно вказати його при створенні або ж оновленні предмету' \
                '\n\nДодати або оновити інформацію про викладача: /add_teacher_info' \
