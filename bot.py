@@ -128,7 +128,7 @@ async def add_subject(message: types.Message, state: FSMContext):
 
     data = message.values['text'].split(' ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -147,7 +147,7 @@ async def add_subject(message: types.Message, state: FSMContext):
 
         if not 0 < number <= len(teachers):
             await state.finish()
-            await message.answer(f'☹ Ви ввели неправильні дані. Номер предмету повинен бути зі списку'
+            await message.answer(f'☹ Ви ввели неправильні дані. Номери предмету і викладача повинні бути зі списку'
                                  f'\n\nСпробувати ще раз: /add_subject')
             return
 
@@ -200,7 +200,7 @@ async def add_teacher_start(message: types.Message):
 async def add_teacher(message: types.Message, state: FSMContext):
     data = message.values['text'].split(', ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -291,7 +291,7 @@ async def add_teacher_info_start(message: types.Message):
 async def add_teacher_info(message: types.Message, state: FSMContext):
     data = message.values['text'].split(', ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -367,7 +367,7 @@ async def update_subject(message: types.Message, state: FSMContext):
     teachers = get_teachers()
     data = message.values['text'].split(' ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -459,7 +459,7 @@ async def update_teacher(message: types.Message, state: FSMContext):
     teachers = get_teachers()
     data = message.values['text'].split(', ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -539,7 +539,7 @@ async def delete_subject(message: types.Message, state: FSMContext):
     subjects = get_subjects()
     data = message.values['text'].split(' ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -603,7 +603,7 @@ async def delete_teacher(message: types.Message, state: FSMContext):
     teachers = get_teachers()
     data = message.values['text'].split(' ')
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -788,7 +788,7 @@ async def create_queue(message: types.Message, state: FSMContext):
 
     data = message.values['text']
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -853,7 +853,7 @@ async def clear_queue(message: types.Message, state: FSMContext):
 
     data = message.values['text']
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -922,7 +922,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
 
     data = message.values['text']
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -1000,7 +1000,7 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
 
     data = message.values['text']
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -1045,9 +1045,14 @@ def fetch_queue(subject_id):
     return queue
 
 
-def get_sign_up(subject=active_subject, student=active_student):
+def get_sign_up(subject=None, student=None):
+    subject = subject if subject else active_subject
+    student = student if student else active_student
+
     sign_up_str = ''
     if not subject or not student:
+        print(active_subject, active_student)
+        print(subject, student)
         sign_up_str += '🙄 Жодна черга не активна\n\nРозпочати чергу: /start_queue'
         return sign_up_str
 
@@ -1193,7 +1198,7 @@ async def start_queue(message: types.Message, state: FSMContext):
 
     data = message.values['text']
     if message.values['text'][0] == '/':
-        if message.values['text'] == '/back':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
             await state.finish()
             await message.answer('🔙 Повернуто в головне меню')
             return
@@ -1269,6 +1274,104 @@ async def next(message: types.Message):
         active_student = 0
 
     await message.answer(queue_str)
+
+
+@dp.message_handler(commands='skip')
+async def skip(message: types.Message):
+    if not active_subject:
+        await message.answer('Пропустити студента(-ів) можна лише в активній черзі!')
+        return
+
+    user = message.from_user
+    add_user(user)
+    user_id = user.id
+    user_name = user.first_name
+
+    arguments = message.get_args().split(' ')
+    if len(arguments) not in (0, 1):
+        await message.answer('🗿 Ви ввели забагато аргументів'
+                             '\n\n☝ Необхідно вказати кількість місць, в черзі, які Ви хочете пропустити, '
+                             'або ж не вказувати нічого для пропускання одного студента'
+                             '\n\n👉 Наприклад: /skip або /skip 3')
+        return
+
+    arguments = ''.join(arguments)
+    if arguments:
+        try:
+            arguments = int(arguments)
+        except ValueError:
+            await message.answer('Аргумент повинен бути лише числом!')
+            return
+    else:
+        arguments = 1
+    to_skip = arguments
+
+    get_queue_id = """SELECT id_queue 
+                      FROM queues 
+                      JOIN subjects sb
+                          USING (subject_id)
+                      WHERE sb.title = %s"""
+    db.my_cursor.execute(get_queue_id, (active_subject,))
+    id_queue = db.my_cursor.fetchone()[0]
+
+    check_sign_up = """SELECT position
+                       FROM sign_ups
+                       WHERE telegram_user_id = %s
+                       AND id_queue = %s;"""
+    db.my_cursor.execute(check_sign_up, (user_id, id_queue))
+    position = db.my_cursor.fetchone()
+
+    if not position:
+        await message.answer('Ви не записані в активну чергу, щоб пропускати когось')
+        return
+
+    position = position[0]
+    if position >= active_student:
+        delete_sign_up = f"""DELETE FROM sign_ups
+                             WHERE id_queue = {id_queue} AND position = {position};"""
+        db.my_cursor.execute(delete_sign_up)
+        db.mydb.commit()
+
+        queue = fetch_queue(get_subject_id())
+        positions = tuple(map(lambda x: x[0], queue))
+        position_index = 0
+        for index, k in enumerate(positions):
+            if k == position:
+                position_index = index
+        index_to_jump_to = position_index + to_skip
+        positions_to_move = []
+        if index_to_jump_to <= positions[-1]:
+            for index, k in enumerate(positions):
+                range_of_indeces = slice(position_index+1, index_to_jump_to)
+                if k in positions[range_of_indeces]:
+                    positions_to_move.append(k)
+        else:
+            await message.answer('Далі скіпати не можна!')
+            return
+
+        print(positions_to_move)
+
+        move_sign_up = f"""UPDATE sign_ups
+                               SET position = position - 1
+                               WHERE id_queue = {id_queue} AND position IN {positions_to_move};"""
+        db.my_cursor.execute(move_sign_up)
+        db.mydb.commit()
+        make_sign_up = f"""INSERT INTO sign_ups VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});"""
+        db.my_cursor.execute(make_sign_up)
+        db.mydb.commit()
+
+        if db.my_cursor.rowcount < 1:
+            await message.answer('🔧 Виникла проблема із запитом до бази даних'
+                                 '\n\nСпробувати ще раз: /skip <i>{кількість місць (за замовчуванням: 1)}</i>')
+        else:
+            if to_skip == 1:
+                await message.answer(f'✅ {user_name} успішно пропустив(-ла) 1 студента')
+            else:
+                await message.answer(f'✅ {user_name} успішно пропустив(-ла) {to_skip} студентів')
+
+    else:
+        await message.answer('Ви вже здали, взагалі-то)))')
+    return
 
 
 @dp.message_handler(commands='show_current_student')
@@ -1358,7 +1461,6 @@ async def all_students(message: types.Message):
             i += 1
     else:
         all_students_str += '🫥 Список зареєстрованих студентів порожній\n'
-    all_students_str += '\nДодати студента: /add_student'
 
     await message.answer(all_students_str)
     return
@@ -1586,8 +1688,7 @@ async def sign_out(message: types.Message):
                 position = position[0]
 
                 delete_sign_up = f"""DELETE FROM sign_ups
-                                     WHERE position = {position} ;
-                                     """
+                                     WHERE id_queue = {id_queue} AND position = {position};"""
                 db.my_cursor.execute(delete_sign_up)
                 db.mydb.commit()
 
