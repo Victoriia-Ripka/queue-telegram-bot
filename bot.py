@@ -1043,9 +1043,6 @@ def fetch_queue(subject_id):
 
 
 def get_sign_up(subject=active_subject, student=active_student):
-    # act_sb = subject if subject else active_subject
-    # act_st = student if student else active_student
-
     sign_up_str = ''
     if not subject or not student:
         sign_up_str += '🙄 Жодна черга не активна\n\nРозпочати чергу: /start_queue'
@@ -1500,7 +1497,6 @@ async def sign_up(message: types.Message):
             return
 
         # Перевірка, чи є вже на цьому місці записаний студент
-
         check_student_by_pos = """SELECT st.firstname
                                    FROM sign_ups su
                                    JOIN students st
@@ -1591,12 +1587,6 @@ async def sign_out(message: types.Message):
                                      """
                 db.my_cursor.execute(delete_sign_up)
                 db.mydb.commit()
-
-                # update_positions = f"""UPDATE sign_ups
-                #                        SET position = position-1
-                #                        WHERE position > {position};"""
-                # db.my_cursor.execute(update_positions)
-                # db.mydb.commit()
 
                 await message.answer(f'❌ {user_name} було успішно видалено з черги')
             else:
