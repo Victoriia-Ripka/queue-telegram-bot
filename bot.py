@@ -1274,7 +1274,7 @@ async def next(message: types.Message):
 @dp.message_handler(commands='skip')
 async def skip(message: types.Message):
     if not active_subject:
-        await message.answer('Пропустити студента(-ів) можна лише в активній черзі!')
+        await message.answer('🙄 Пропустити студента(-ів) можна лише в активній черзі!')
         return
 
     user = message.from_user
@@ -1295,7 +1295,7 @@ async def skip(message: types.Message):
         try:
             arguments = int(arguments)
         except ValueError:
-            await message.answer('Аргумент повинен бути лише числом!')
+            await message.answer('1️⃣ Аргумент повинен бути лише числом!')
             return
     else:
         arguments = 1
@@ -1317,11 +1317,11 @@ async def skip(message: types.Message):
     position = db.my_cursor.fetchone()
 
     if not position:
-        await message.answer('Ви не записані в активну чергу, щоб пропускати когось')
+        await message.answer('📜 Ви не записані в активну чергу, щоб пропускати когось')
         return
 
     position = position[0]
-    if position >= active_student:
+    if position >= active_student:  # пофіксити баг з пропуском при перезаписі
         queue = fetch_queue(get_subject_id())
         positions = tuple(map(lambda x: x[0], queue))
 
@@ -1338,7 +1338,7 @@ async def skip(message: types.Message):
         if index_to_jump_to <= positions[-1]:
             range_of_indeces = slice(position_index+1, index_to_jump_to+1)
         else:
-            await message.answer('Далі скіпати не можна!')
+            await message.answer('🔚 Черга добігає кінця, тому вже неможливо нікого пропустити')
             return
         move_sign_up = f"""UPDATE sign_ups
                            SET position = position - 1
@@ -1372,7 +1372,7 @@ async def skip(message: types.Message):
             else:
                 await next(message)
     else:
-        await message.answer('Ви вже здали, взагалі-то)))')
+        await message.answer('🙄 Ви вже здали!')
     return
 
 
