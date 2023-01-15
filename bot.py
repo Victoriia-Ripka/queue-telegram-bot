@@ -404,9 +404,7 @@ async def update_subject(message: types.Message, state: FSMContext):
     del data[-1]
     title = separator.join(data)
 
-    print(subjects)
     previous_title = subjects[subject_number - 1]
-    print(previous_title)
     subject_id = get_subject_id(previous_title)
 
     name = teachers[teacher_number - 1]
@@ -568,7 +566,6 @@ async def delete_subject(message: types.Message, state: FSMContext):
         return
 
     title = subjects[number - 1]
-    print(subjects, title)
     id = get_subject_id(title)
 
     sql = 'DELETE FROM subjects WHERE subject_id = %s;'
@@ -1051,8 +1048,6 @@ def get_sign_up(subject=None, student=None):
 
     sign_up_str = ''
     if not subject or not student:
-        print(active_subject, active_student)
-        print(subject, student)
         sign_up_str += '🙄 Жодна черга не активна\n\nРозпочати чергу: /start_queue'
         return sign_up_str
 
@@ -1327,36 +1322,34 @@ async def skip(message: types.Message):
 
     position = position[0]
     if position >= active_student:
+        queue = fetch_queue(get_subject_id())
+        positions = tuple(map(lambda x: x[0], queue))
+
         delete_sign_up = f"""DELETE FROM sign_ups
                              WHERE id_queue = {id_queue} AND position = {position};"""
         db.my_cursor.execute(delete_sign_up)
         db.mydb.commit()
 
-        queue = fetch_queue(get_subject_id())
-        positions = tuple(map(lambda x: x[0], queue))
         position_index = 0
         for index, k in enumerate(positions):
             if k == position:
                 position_index = index
         index_to_jump_to = position_index + to_skip
-        positions_to_move = []
         if index_to_jump_to <= positions[-1]:
-            for index, k in enumerate(positions):
-                range_of_indeces = slice(position_index+1, index_to_jump_to)
-                if k in positions[range_of_indeces]:
-                    positions_to_move.append(k)
+            range_of_indeces = slice(position_index+1, index_to_jump_to+1)
         else:
             await message.answer('Далі скіпати не можна!')
             return
-
-        print(positions_to_move)
-
         move_sign_up = f"""UPDATE sign_ups
-                               SET position = position - 1
-                               WHERE id_queue = {id_queue} AND position IN {positions_to_move};"""
+                           SET position = position - 1
+                           WHERE id_queue = {id_queue} AND position """
+        if len(positions[range_of_indeces]) == 1:
+            move_sign_up += f'= {positions[range_of_indeces][0]};'
+        else:
+            move_sign_up += f'IN {positions[range_of_indeces]};'
         db.my_cursor.execute(move_sign_up)
         db.mydb.commit()
-        make_sign_up = f"""INSERT INTO sign_ups VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});"""
+        make_sign_up = f'INSERT INTO sign_ups VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});'
         db.my_cursor.execute(make_sign_up)
         db.mydb.commit()
 
@@ -1365,10 +1358,19 @@ async def skip(message: types.Message):
                                  '\n\nСпробувати ще раз: /skip <i>{кількість місць (за замовчуванням: 1)}</i>')
         else:
             if to_skip == 1:
-                await message.answer(f'✅ {user_name} успішно пропустив(-ла) 1 студента')
+                await message.answer(f'🔃 {user_name} пропустив(-ла) 1 студента')
             else:
-                await message.answer(f'✅ {user_name} успішно пропустив(-ла) {to_skip} студентів')
+                await message.answer(f'🔃 {user_name} пропустив(-ла) {to_skip} студентів')
 
+            if positions[index_to_jump_to] == position+1:
+                next_student = active_student + 1
+                if active_student is not positions[-1]:
+                    while next_student not in positions:
+                        next_student += 1
+                queue = fetch_queue(get_subject_id())  # повторний фетчинг черги (вже оновленої)
+                await message.answer(active_queue_to_str(queue, False, next_student))
+            else:
+                await next(message)
     else:
         await message.answer('Ви вже здали, взагалі-то)))')
     return
