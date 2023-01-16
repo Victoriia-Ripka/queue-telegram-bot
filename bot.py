@@ -1325,21 +1325,26 @@ async def skip(message: types.Message):
         queue = fetch_queue(get_subject_id())
         positions = tuple(map(lambda x: x[0], queue))
 
-        delete_sign_up = f"""DELETE FROM sign_ups
-                             WHERE id_queue = {id_queue} AND position = {position};"""
-        db.my_cursor.execute(delete_sign_up)
-        db.mydb.commit()
-
         position_index = 0
         for index, k in enumerate(positions):
             if k == position:
                 position_index = index
+
         index_to_jump_to = position_index + to_skip
-        if index_to_jump_to <= positions[-1]:
+        if index_to_jump_to <= positions.index(positions[-1]):
             range_of_indeces = slice(position_index+1, index_to_jump_to+1)
         else:
-            await message.answer('🔚 Черга добігає кінця, тому вже неможливо нікого пропустити')
+            await message.answer('🔚 Неможливо пропустити більше студентів, '
+                                 f'ніж записано в черзі після студента {user_name}')
             return
+        print(positions, index_to_jump_to, positions[index_to_jump_to], positions[-1], positions.index(positions[-1]))
+        # зверху технічний прінт, потім видалити!
+
+        delete_sign_up = f"""DELETE FROM sign_ups
+                                     WHERE id_queue = {id_queue} AND position = {position};"""
+        db.my_cursor.execute(delete_sign_up)
+        db.mydb.commit()
+
         move_sign_up = f"""UPDATE sign_ups
                            SET position = position - 1
                            WHERE id_queue = {id_queue} AND position """
@@ -1361,16 +1366,15 @@ async def skip(message: types.Message):
                 await message.answer(f'🔃 {user_name} пропустив(-ла) 1 студента')
             else:
                 await message.answer(f'🔃 {user_name} пропустив(-ла) {to_skip} студентів')
-
-            if positions[index_to_jump_to] == position+1:
+            if active_student == position:
+                await next(message)
+            else:
                 next_student = active_student + 1
                 if active_student is not positions[-1]:
                     while next_student not in positions:
                         next_student += 1
                 queue = fetch_queue(get_subject_id())  # повторний фетчинг черги (вже оновленої)
                 await message.answer(active_queue_to_str(queue, False, next_student))
-            else:
-                await next(message)
     else:
         await message.answer('🙄 Ви вже здали!')
     return
