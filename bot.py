@@ -73,7 +73,8 @@ async def help(message: types.Message):
            '\n/set_max <i>{число}</i> — встановити максимальну довжину черги' \
            '\n/sign_up <i>{номер або назва предмету} {позиція в черзі (за бажанням)}</i> — ' \
            'записатися в чергу на предмет' \
-           '\n/sign_out <i>{номер або назва предмету}</i> — виписатися з черги на предмет'
+           '\n/sign_out <i>{номер або назва предмету}</i> — виписатися з черги на предмет' \
+           '\n/skip <i>{кількість студентів (за замовчуванням: 1)}</i> — пропустити певну кількість людей вперед'
     await message.answer(text)
 
 
@@ -125,6 +126,7 @@ async def add_subject_start(message: types.Message):
 @dp.message_handler(state=Form.subject)
 async def add_subject(message: types.Message, state: FSMContext):
     teachers = get_teachers()
+    subjects = get_subjects()
 
     data = message.values['text'].split(' ')
     if message.values['text'][0] == '/':
@@ -147,7 +149,7 @@ async def add_subject(message: types.Message, state: FSMContext):
 
         if not 0 < number <= len(teachers):
             await state.finish()
-            await message.answer(f'☹ Ви ввели неправильні дані. Номери предмету і викладача повинні бути зі списку'
+            await message.answer(f'☹ Ви ввели неправильні дані. Номер викладача повинен бути зі списку'
                                  f'\n\nСпробувати ще раз: /add_subject')
             return
 
@@ -156,6 +158,12 @@ async def add_subject(message: types.Message, state: FSMContext):
         separator = ' '
         data.pop()
         title = separator.join(data)
+
+        if title in subjects:
+            await state.finish()
+            await message.answer('😉 Цей предмет уже доданий'
+                                 '\n\nДодати інший предмет: /add_subject\nДодати викладача: /add_teacher')
+            return
 
     else:
         await state.finish()
@@ -198,6 +206,8 @@ async def add_teacher_start(message: types.Message):
 
 @dp.message_handler(state=Form.teacher)
 async def add_teacher(message: types.Message, state: FSMContext):
+    teachers = get_teachers()
+
     data = message.values['text'].split(', ')
     if message.values['text'][0] == '/':
         if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
@@ -211,59 +221,42 @@ async def add_teacher(message: types.Message, state: FSMContext):
             return
 
     allowed_name_symbols = ('-', '.', "'")
-    if len(data) == 1:
-        name = data[0]
-        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
-            await state.finish()
-            await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
-            return
-        new_teacher = (name,)
-        sql = 'INSERT INTO teachers (name) VALUES (%s);'
-        db.my_cursor.execute(sql, new_teacher)
-        db.mydb.commit()
-    elif len(data) == 2:
-        name = data[0]
-        username_telegram = data[1]
-        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
-        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
-            await state.finish()
-            await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
-            return
-        new_teacher = (name, username_telegram)
-        sql = 'INSERT INTO teachers (name, username_telegram) VALUES (%s, %s);'
-        db.my_cursor.execute(sql, new_teacher)
-        db.mydb.commit()
-    elif len(data) == 3:
-        name = data[0]
-        username_telegram = data[1]
-        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
-        phone_number = data[2]
-        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
-            await state.finish()
-            await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
-            return
-        new_teacher = (name, username_telegram, phone_number)
-        sql = 'INSERT INTO teachers (name, username_telegram, phone_number) VALUES (%s, %s, %s);'
-        db.my_cursor.execute(sql, new_teacher)
-        db.mydb.commit()
-    elif len(data) == 4:
-        name = data[0]
-        username_telegram = data[1]
-        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
-        phone_number = data[2]
-        email = data[3]
-        if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
-            await state.finish()
-            await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
-            return
-        new_teacher = (name, username_telegram, phone_number, email)
-        sql = 'INSERT INTO teachers (name, username_telegram, phone_number, email) VALUES (%s, %s, %s, %s);'
-        db.my_cursor.execute(sql, new_teacher)
-        db.mydb.commit()
-    else:
+    if len(data) not in range(1, 5):
         await state.finish()
         await message.answer('🗿 Ви ввели забагато параметрів (більш ніж 4)\n\nСпробувати ще раз: /add_teacher')
         return
+
+    name = data[0]
+    if name in teachers:
+        await state.finish()
+        await message.answer('😉 Цей викладач уже доданий'
+                             '\n\nДодати іншого викладача: /add_teacher\nДодати предмет: /add_subject')
+        return
+    if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
+        await state.finish()
+        await message.answer(
+            '🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
+        return
+    if len(data) == 1:
+        new_teacher = (name,)
+        sql = 'INSERT INTO teachers (name) VALUES (%s);'
+    else:
+        username_telegram = data[1]
+        username_telegram = username_telegram if username_telegram[0] == '@' else '@' + username_telegram
+        if len(data) == 2:
+            new_teacher = (name, username_telegram)
+            sql = 'INSERT INTO teachers (name, username_telegram) VALUES (%s, %s);'
+        elif len(data) == 3:
+            phone_number = data[2]
+            new_teacher = (name, username_telegram, phone_number)
+            sql = 'INSERT INTO teachers (name, username_telegram, phone_number) VALUES (%s, %s, %s);'
+        elif len(data) == 4:
+            phone_number = data[2]
+            email = data[3]
+            new_teacher = (name, username_telegram, phone_number, email)
+            sql = 'INSERT INTO teachers (name, username_telegram, phone_number, email) VALUES (%s, %s, %s, %s);'
+    db.my_cursor.execute(sql, new_teacher)
+    db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
@@ -655,8 +648,8 @@ def get_teachers():
 def get_teacher_id(teacher_name):
     query = f"""SELECT id_teacher
                 FROM teachers
-                WHERE name = '{teacher_name}';"""
-    db.my_cursor.execute(query)
+                WHERE name = %s"""
+    db.my_cursor.execute(query, (teacher_name,))
     teacher_id = int(db.my_cursor.fetchone()[0])
 
     return teacher_id
@@ -1390,6 +1383,7 @@ async def all_teachers(message: types.Message):
     teachers = get_teachers_with_all_info()
     teachers_lists = []
     for teacher in teachers:
+        print(teacher[1])
         teacher_id = get_teacher_id(teacher[1])
 
         sql = f"""SELECT title FROM subjects
