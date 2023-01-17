@@ -220,7 +220,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
                                  '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
             return
 
-    allowed_name_symbols = ('-', '.', "'")
+    allowed_name_symbols = ('-', '.', "'", "`")
     if len(data) not in range(1, 5):
         await state.finish()
         await message.answer('🗿 Ви ввели забагато параметрів (більш ніж 4)\n\nСпробувати ще раз: /add_teacher')
@@ -234,8 +234,8 @@ async def add_teacher(message: types.Message, state: FSMContext):
         return
     if not all(x.isalpha() or x.isspace() or x in allowed_name_symbols for x in name):
         await state.finish()
-        await message.answer(
-            '🔤 Ім\'я викладача повинне складатися лише з літер\n\nСпробувати ще раз: /add_teacher')
+        await message.answer('🔤 Ім\'я викладача повинне складатися лише з літер та символів, '
+                             'що використовуються в іменах\n\nСпробувати ще раз: /add_teacher')
         return
     if len(data) == 1:
         new_teacher = (name,)
@@ -255,8 +255,15 @@ async def add_teacher(message: types.Message, state: FSMContext):
             email = data[3]
             new_teacher = (name, username_telegram, phone_number, email)
             sql = 'INSERT INTO teachers (name, username_telegram, phone_number, email) VALUES (%s, %s, %s, %s);'
-    db.my_cursor.execute(sql, new_teacher)
-    db.mydb.commit()
+    try:
+        db.my_cursor.execute(sql, new_teacher)
+    except mysql.connector.DatabaseError:
+        await state.finish()
+        await message.answer('😳 Ви використовуєте емоджи або інші незрозумілі символи чи вводите занадто довгі дані'
+                             '\n\nСпробувати ще раз: /add_teacher')
+        return
+    else:
+        db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
@@ -494,16 +501,18 @@ async def update_teacher(message: types.Message, state: FSMContext):
         username_telegram = '@' + username_telegram
 
     new_teacher_info = (name, username_telegram, phone_number, email, teacher_id)
+    sql = """UPDATE teachers
+             SET name = %s, username_telegram = %s, phone_number = %s, email = %s
+             WHERE id_teacher = %s"""
     try:
-        sql = """UPDATE teachers
-                 SET name = %s, username_telegram = %s, phone_number = %s, email = %s
-                 WHERE id_teacher = %s"""
         db.my_cursor.execute(sql, new_teacher_info)
-        db.mydb.commit()
-    except mysql.connector.Error:
+    except mysql.connector.DatabaseError:
         await state.finish()
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /update_teacher')
+        await message.answer('😳 Ви використовуєте емоджи або інші незрозумілі символи чи вводите занадто довгі дані'
+                             '\n\nСпробувати ще раз: /update_teacher')
         return
+    else:
+        db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /update_teacher')
@@ -1288,14 +1297,14 @@ async def skip(message: types.Message):
         try:
             arguments = int(arguments)
         except ValueError:
-            await message.answer('1️⃣ Аргумент повинен бути лише числом!')
+            await message.answer('1️⃣  Аргумент повинен бути лише числом!')
             return
     else:
         arguments = 1
     to_skip = arguments
 
-    get_queue_id = """SELECT id_queue 
-                      FROM queues 
+    get_queue_id = """SELECT id_queue
+                      FROM queues
                       JOIN subjects sb
                           USING (subject_id)
                       WHERE sb.title = %s"""
