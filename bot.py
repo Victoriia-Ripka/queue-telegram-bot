@@ -1330,8 +1330,6 @@ async def skip(message: types.Message):
             await message.answer('🔚 Неможливо пропустити більше студентів, '
                                  f'ніж записано в черзі після студента {user_name}')
             return
-        print(positions, index_to_jump_to, positions[index_to_jump_to], positions[-1], positions.index(positions[-1]))
-        # зверху технічний прінт, потім видалити!
 
         delete_sign_up = f"""DELETE FROM sign_ups
                                      WHERE id_queue = {id_queue} AND position = {position};"""
@@ -1383,7 +1381,6 @@ async def all_teachers(message: types.Message):
     teachers = get_teachers_with_all_info()
     teachers_lists = []
     for teacher in teachers:
-        print(teacher[1])
         teacher_id = get_teacher_id(teacher[1])
 
         sql = f"""SELECT title FROM subjects
