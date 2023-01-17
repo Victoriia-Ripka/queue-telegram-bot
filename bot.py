@@ -105,7 +105,7 @@ async def add_subject_start(message: types.Message):
         for subject, i in zip(subjects, range(len(subjects))):
             str += f'{i + 1}. {subject}\n'
     else:
-        str = '🫥 Список вже існуючих предметів порожній\n\n'
+        str = '🫥 Список вже існуючих предметів порожній\n'
     
     teachers = get_teachers()
     if teachers:
@@ -144,7 +144,8 @@ async def add_subject(message: types.Message, state: FSMContext):
             number = int(data[-1])
         except ValueError:
             await state.finish()
-            await message.answer(f'1️⃣  Після назви повинне бути вказане число\n\nСпробувати ще раз: /add_subject')
+            await message.answer(f'1️⃣  Після назви повинен бути вказаний номер викладача зі списку'
+                                 f'\n\nСпробувати ще раз: /add_subject')
             return
 
         if not 0 < number <= len(teachers):
@@ -182,7 +183,7 @@ async def add_subject(message: types.Message, state: FSMContext):
     teacher_name = db.my_cursor.fetchone()[0]  # для виведення тексту у випадку успіху
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /add_subject')
     else:
         await message.answer(f'✅ Предмет {title} викладача {teacher_name} додано до списку')
     await state.finish()
@@ -266,7 +267,7 @@ async def add_teacher(message: types.Message, state: FSMContext):
         db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /add_subject')
     else:
         await message.answer(f'✅ Викладача {name} додано до списку')
     await state.finish()
@@ -333,7 +334,7 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
         return
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /add_teacher_info')
     else:
         await message.answer(f'✅ Інформація додана')
     await state.finish()
@@ -417,7 +418,7 @@ async def update_subject(message: types.Message, state: FSMContext):
     db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /update_subject')
     else:
         await message.answer(f'🔄 Предмет {title} успішно оновлений')
     await state.finish()
@@ -571,11 +572,18 @@ async def delete_subject(message: types.Message, state: FSMContext):
     id = get_subject_id(title)
 
     sql = 'DELETE FROM subjects WHERE subject_id = %s;'
-    db.my_cursor.execute(sql, (id,))
+
+    try:
+        db.my_cursor.execute(sql, (id,))
+    except mysql.connector.IntegrityError:
+        await state.finish()
+        await message.answer('🗒 На цей предмет існує черга. Спочатку видаліть її\n\n'
+                             'Видалити чергу: /delete_queue\nСпробувати ще раз: /delete_subject')
+        return
     db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_subject')
     else:
         await message.answer(f'🗑 Предмет було успішно видалено')
     await state.finish()
@@ -631,8 +639,16 @@ async def delete_teacher(message: types.Message, state: FSMContext):
     name = teachers[number - 1]
     id = get_teacher_id(name)
     sql = 'DELETE FROM teachers WHERE id_teacher = %s;'
-    db.my_cursor.execute(sql, (id,))
-    db.mydb.commit()
+    try:
+        db.my_cursor.execute(sql, (id,))
+    except mysql.connector.IntegrityError:
+        await state.finish()
+        await message.answer('📙 Цей викладач читає якийсь предмет. Спершу видаліть цей предмет '
+                             'або призначте для нього іншого викладача\n\nВидалити предмет: /delete_subject'
+                             '\nЗмінити викладача для предмету: /update_subject\nСпробувати ще раз: /delete_teacher')
+        return
+    else:
+        db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
@@ -1424,7 +1440,12 @@ async def all_teachers(message: types.Message):
         all_teachers_str += '🫥 Список викладачів порожній\n'
     all_teachers_str += '\nДодати викладача: /add_teacher'
 
-    await message.answer(all_teachers_str)
+    str_len = len(all_teachers_str)
+    if str_len > 4096:
+        for x in range(0, str_len, 4096):
+            await message.answer(all_teachers_str[x:x+4096])
+    else:
+        await message.answer(all_teachers_str)
     return
 
 
