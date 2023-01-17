@@ -42,7 +42,8 @@ def start_settings():
 
 def create_database():
     if mydb and my_cursor:
-        query = """CREATE SCHEMA IF NOT EXISTS `queue-bot-kpi` DEFAULT CHARACTER SET utf8;"""
+        query = """CREATE SCHEMA IF NOT EXISTS `queue-bot-kpi`
+                   DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"""
         my_cursor.execute(query)
         mydb.commit()
     else:
@@ -74,8 +75,8 @@ def create_tables():
                        CONSTRAINT `fk_id_teacher`
                    	       FOREIGN KEY (`id_teacher`)
                                REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
-                   		ON DELETE NO ACTION
-                   		ON UPDATE CASCADE
+                   		       ON DELETE NO ACTION
+                   		       ON UPDATE CASCADE
                    )
                    ENGINE = InnoDB;"""
         my_cursor.execute(query)
@@ -84,9 +85,9 @@ def create_tables():
         # таблиця "Cтуденти"
         query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
                    (
-                       `telegram_user_id` CHAR(12)    NOT NULL,
-                       `username`         VARCHAR(45) NULL,
-                       `firstname`        VARCHAR(45) NULL,
+                       `telegram_user_id` CHAR(12)     NOT NULL,
+                       `username`         VARCHAR(70)  NULL,
+                       `firstname`        VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
                        PRIMARY KEY (`telegram_user_id`),
                        UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
                        UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE
@@ -116,10 +117,10 @@ def create_tables():
         # таблиця "Записи"
         query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
                    (
-                       `id_sign_up`       INT         NOT NULL AUTO_INCREMENT,
-                       `id_queue`         INT         NOT NULL,
-                       `telegram_user_id` CHAR(12)    NOT NULL,
-                       `position`         INT         NOT NULL,
+                       `id_sign_up`       INT      NOT NULL AUTO_INCREMENT,
+                       `id_queue`         INT      NOT NULL,
+                       `telegram_user_id` CHAR(12) NOT NULL,
+                       `position`         INT      NOT NULL,
                        PRIMARY KEY (`id_sign_up`),
                        CONSTRAINT `id_queue fk from Sign_ups to Queue`
                            FOREIGN KEY (`id_queue`)
@@ -139,12 +140,12 @@ def create_tables():
         # таблиця "Викладачі"
         query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
                    (
-                       `id_teacher`        INT           NOT NULL AUTO_INCREMENT,
-                       `name`              VARCHAR(200)  NOT NULL,
-                       `username_telegram` VARCHAR(45)   NULL,
-                       `phone_number`      VARCHAR(20)   NULL,
-                       `email`             VARCHAR(60)   NULL,
-                       `info`              TEXT(1000)    NULL,
+                       `id_teacher`        INT          NOT NULL AUTO_INCREMENT,
+                       `name`              VARCHAR(200) NOT NULL,
+                       `username_telegram` VARCHAR(45)  NULL,
+                       `phone_number`      VARCHAR(20)  NULL,
+                       `email`             VARCHAR(70)  NULL,
+                       `info`              TEXT(1000)   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
                        PRIMARY KEY (`id_teacher`),
                        UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE
                    )
