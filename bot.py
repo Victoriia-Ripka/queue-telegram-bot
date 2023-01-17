@@ -1430,22 +1430,29 @@ async def all_teachers(message: types.Message):
             email = email if email else '(немає)'
             info = info if info else '</i>(немає)<i>'
             subjects = subjects if subjects else '(нічого)'
-            all_teachers_str += f'\n<b>{i}. {name}</b>\n' \
-                                f'  💬  {username}\n' \
-                                f'  📱  {phone}\n' \
-                                f'  ✉  {email}\n' \
-                                f'  📕  {subjects}\n' \
-                                f'  ℹ  <i>{info}</i>\n'
+            teacher_str = f'\n<b>{i}. {name}</b>\n' \
+                          f'  💬  {username}\n' \
+                          f'  📱  {phone}\n' \
+                          f'  ✉  {email}\n' \
+                          f'  📕  {subjects}\n' \
+                          f'  ℹ  <i>{info}</i>\n'
+
+            str_len = len(all_teachers_str) + len(teacher_str)
+            if str_len > 4096:
+                await message.answer(all_teachers_str)
+                all_teachers_str = teacher_str
+            else:
+                all_teachers_str += teacher_str
     else:
         all_teachers_str += '🫥 Список викладачів порожній\n'
-    all_teachers_str += '\nДодати викладача: /add_teacher'
 
-    str_len = len(all_teachers_str)
-    if str_len > 4096:
-        for x in range(0, str_len, 4096):
-            await message.answer(all_teachers_str[x:x+4096])
+    add_teacher_hint = '\nДодати викладача: /add_teacher'
+    if len(all_teachers_str) + len(add_teacher_hint) < 4096:
+        all_teachers_str += add_teacher_hint
+        await message.answer(all_teachers_str)
     else:
         await message.answer(all_teachers_str)
+        await message.answer(add_teacher_hint)
     return
 
 
@@ -1504,8 +1511,8 @@ async def set_max(message: types.Message):
                              '\n👉 Наприклад, /set_max 30')
         return
 
-    if number < 1:
-        await message.answer('☝ Мінімальна довжина черги - 1 студент'
+    if number < 1 or number > 500:
+        await message.answer('☝ Мінімальна довжина черги - 1 студент, а максимальна - 500 студентів'
                              '\n\nСпробувати задати довжину ще раз: /set_max <i>{затребувана довжина черги}</i>')
         return
 
