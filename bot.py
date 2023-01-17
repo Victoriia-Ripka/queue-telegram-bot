@@ -1074,12 +1074,12 @@ def get_sign_up(subject=None, student=None):
     if queue:
         positions = tuple(map(lambda x: x[0], queue))
 
-        if student is not positions[-1] + 1:
+        if student != positions[-1] + 1:
             while student not in positions:
                 student += 1
 
             next_st = student + 1
-            if student is not positions[-1]:
+            if student != positions[-1]:
                 while next_st not in positions:
                     next_st += 1
 
@@ -1136,12 +1136,12 @@ def active_queue_to_str(queue, end, next_student=0):
             queue_str += '\nЧерга закінчена 🔚\n'
         else:
             for i, username, firstname in queue:
-                if i is active_student:
+                if i == active_student:
                     if username:
                         queue_str += f'{i}. <b>{firstname} (@{username})</b> 🟢\n'
                     else:
                         queue_str += f'{i}. <b>{firstname}</b> 🟢\n'
-                elif i is next_student:
+                elif i == next_student:
                     if username:
                         queue_str += f'{i}. <i>{firstname} (@{username}) — приготуватися</i>\n'
                     else:
@@ -1240,6 +1240,7 @@ async def start_queue(message: types.Message, state: FSMContext):
             await state.finish()
             return
 
+    active_student = 0
     await next(message)
 
     await state.finish()
@@ -1262,7 +1263,7 @@ async def next(message: types.Message):
 
     positions = tuple(map(lambda x: x[0], queue))
 
-    if queue and active_student is not positions[-1] + 1:
+    if queue and active_student != positions[-1] + 1:
         # перевірка на наявність черги на вищому рівні за функцію active_queue_to_str()
         # потрібна для того, щоб запобігти нескінченному виконанню циклів while
         # і убезпечитися від зміни активного студента
@@ -1272,10 +1273,12 @@ async def next(message: types.Message):
             active_student += 1
 
         next_student = active_student + 1
-        if active_student is not positions[-1]:
+        if active_student != positions[-1]:
+            print(f'Ми пройшли перевірку на неостанній елемент, коли active_student та next_student '
+                  f'мали значення {active_student} та {next_student}. Останній елемент в позишинс: {positions[-1]}')
             while next_student not in positions:
                 next_student += 1
-
+        print(next_student)
         queue_str = active_queue_to_str(queue, end, next_student)
     else:
         if not queue:
@@ -1357,7 +1360,7 @@ async def skip(message: types.Message):
             return
 
         delete_sign_up = f"""DELETE FROM sign_ups
-                                     WHERE id_queue = {id_queue} AND position = {position};"""
+                             WHERE id_queue = {id_queue} AND position = {position};"""
         db.my_cursor.execute(delete_sign_up)
         db.mydb.commit()
 
@@ -1382,15 +1385,13 @@ async def skip(message: types.Message):
                 await message.answer(f'🔃 {user_name} пропустив(-ла) 1 студента')
             else:
                 await message.answer(f'🔃 {user_name} пропустив(-ла) {to_skip} студентів')
-            if active_student == position:
-                await next(message)
-            else:
-                next_student = active_student + 1
-                if active_student is not positions[-1]:
-                    while next_student not in positions:
-                        next_student += 1
-                queue = fetch_queue(get_subject_id())  # повторний фетчинг черги (вже оновленої)
-                await message.answer(active_queue_to_str(queue, False, next_student))
+
+            next_student = active_student + 1
+            if active_student != positions[-1]:
+                while next_student not in positions:
+                    next_student += 1
+            queue = fetch_queue(get_subject_id())  # повторний фетчинг черги (вже оновленої)
+            await message.answer(active_queue_to_str(queue, False, next_student))
     else:
         await message.answer('🙄 Ви вже здали!')
     return
