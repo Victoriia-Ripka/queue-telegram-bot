@@ -323,6 +323,12 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
         name = get_teachers()[number - 1]
         id = get_teacher_id(name)
 
+        db.my_cursor.execute("SELECT info FROM teachers WHERE id_teacher = %s", (id,))
+        info_exists = bool(db.my_cursor.fetchone()[0])
+
+
+
+
         new_info = (info, id)
         sql = 'UPDATE teachers SET info = %s WHERE id_teacher = %s;'
         db.my_cursor.execute(sql, new_info)
@@ -695,7 +701,7 @@ async def delete_teacher(message: types.Message, state: FSMContext):
     if db.my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher')
     else:
-        await message.answer(f'🗑 Викладача було успішно видалено')
+        await message.answer(f'🗑 {name} було успішно видалено')
     await state.finish()
     return
 
@@ -796,7 +802,7 @@ def get_subjects_with_queues():
     for subject in result:
         subjects_with_queues.append(subject[0])
 
-    return subjects_with_queues
+    return tuple(subjects_with_queues)
 
 
 def get_subject_id(subject=None):
