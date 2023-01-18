@@ -200,7 +200,7 @@ async def add_teacher_start(message: types.Message):
             str += f'{i + 1}. {subject}\n'
     else:
         str = '🫥 Список викладачів порожній. Ви додасте першого викладача\n'
-    str += '\n📝 Введіть ім\'я викладача\n' \
+    str += '\n📝 Введіть ПІБ викладача\n' \
            '💁 За бажанням також можна вписати телеграм-тег, номер телефону та email, розділивши все комами'
     await message.answer(str)
 
@@ -301,6 +301,7 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
                                  'завершіть роботу зі старою або поверніться в головне меню командою /back'
                                  '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
             return
+
     if len(data) >= 2:
         try:
             number = int(data[0])
@@ -336,7 +337,10 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
     if db.my_cursor.rowcount < 1:
         await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /add_teacher_info')
     else:
-        await message.answer(f'✅ Інформація додана')
+        if info_exists:
+            await message.answer(f'🔄 Інформацію оновлено')
+        else:
+            await message.answer(f'✅ Інформацію додано')
     await state.finish()
 
 
@@ -408,17 +412,40 @@ async def update_subject(message: types.Message, state: FSMContext):
     previous_title = subjects[subject_number - 1]
     subject_id = get_subject_id(previous_title)
 
+    subjects_without_current = list(subjects)
+    print(subjects_without_current)
+    for subject in subjects:
+        if subject == previous_title:
+            print(subject, previous_title)
+            subjects_without_current.remove(previous_title)
+    print(subjects_without_current)
+
+    print(title, subjects)
+    if title in subjects_without_current:
+        await state.finish()
+        await message.answer(f'🙄 Предмет з назвою {title} вже є'
+                             f'\n\nСпробувати ще раз: /update_subject')
+        return
+
     name = teachers[teacher_number - 1]
     teacher_id = get_teacher_id(name)
 
     new_subject = (title, teacher_id, subject_id)
 
     sql = 'UPDATE subjects SET title = %s, id_teacher = %s WHERE subject_id = %s;'
-    db.my_cursor.execute(sql, new_subject)
-    db.mydb.commit()
+    try:
+        db.my_cursor.execute(sql, new_subject)
+    except mysql.connector.DatabaseError:
+        await state.finish()
+        await message.answer('🔧 Виникла проблема із запитом до бази даних'
+                             '\n\nСпробувати ще раз: /update_subject')
+        return
+    else:
+        db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /update_subject')
+        await message.answer('🤔 Здається, Ви ввели дані, які є ідентичними до вже існуючих'
+                             '\n\nСпробувати ще раз: /update_subject')
     else:
         await message.answer(f'🔄 Предмет {title} успішно оновлений')
     await state.finish()
@@ -492,33 +519,48 @@ async def update_teacher(message: types.Message, state: FSMContext):
     if not 0 < number <= len(teachers):
         await state.finish()
         await message.answer(f'☹ Ви ввели неправильні дані. Номер викладача повинен бути зі списку'
-                             f'\n\nСпробувати ще раз: /update_teacher')
+                             '\n\nСпробувати ще раз: /update_teacher')
         return
 
-    name_from_db = teachers[number - 1]
-    teacher_id = get_teacher_id(name_from_db)
+    previous_name = teachers[number - 1]
+    teacher_id = get_teacher_id(previous_name)
+
+    teachers_without_current = list(teachers)
+    print(teachers_without_current)
+    for teacher in teachers:
+        if teacher == previous_name:
+            teachers_without_current.remove(previous_name)
+            print(previous_name, teacher)
+    print(teachers_without_current)
+    if name in teachers_without_current:
+        await state.finish()
+        await message.answer(f'🙄 Викладач з іменем {name} вже є'
+                             f'\n\nСпробувати ще раз: /update_teacher')
+        return
 
     if username_telegram and username_telegram[0] != '@':
         username_telegram = '@' + username_telegram
 
-    new_teacher_info = (name, username_telegram, phone_number, email, teacher_id)
+    new_teacher_data = (name, username_telegram, phone_number, email, teacher_id)
     sql = """UPDATE teachers
              SET name = %s, username_telegram = %s, phone_number = %s, email = %s
              WHERE id_teacher = %s"""
     try:
-        db.my_cursor.execute(sql, new_teacher_info)
+        db.my_cursor.execute(sql, new_teacher_data)
     except mysql.connector.DatabaseError:
         await state.finish()
         await message.answer('😳 Ви використовуєте емоджи або інші незрозумілі символи чи вводите занадто довгі дані'
+                             '\n\n🔧 Якщо ні, то виникла якась інша проблема із запитом до бази даних'
                              '\n\nСпробувати ще раз: /update_teacher')
         return
     else:
         db.mydb.commit()
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /update_teacher')
+        await message.answer('🤔 Здається, Ви ввели дані, які є ідентичними до вже існуючих'
+                             '\n\nСпробувати ще раз: /update_teacher')
     else:
-        await message.answer(f'🔄 Викладач {name_from_db} успішно оновлений')
+        await message.answer(f'🔄 Викладач {name} успішно оновлений')
     await state.finish()
     return
 
@@ -667,7 +709,7 @@ def get_teachers():
     for teacher in result:
         teachers.append(teacher[0])
 
-    return teachers
+    return tuple(teachers)
 
 
 def get_teacher_id(teacher_name):
@@ -686,12 +728,10 @@ def get_teachers_with_id():
     result = db.my_cursor.fetchall()
 
     teachers = []
-    i = 1
-    for teacher in result:
-        teachers.append((i, teacher[1]))
-        i += 1
+    for i, teacher in enumerate(result):
+        teachers.append((i+1, teacher[1]))
 
-    return teachers
+    return tuple(teachers)
 
 
 def get_teachers_with_all_info():
@@ -700,12 +740,10 @@ def get_teachers_with_all_info():
     result = db.my_cursor.fetchall()
 
     teachers = []
-    i = 1
-    for teacher in result:
-        teachers.append((i, teacher[0], teacher[1], teacher[2], teacher[3], teacher[4]))
-        i += 1
+    for i, teacher in enumerate(result):
+        teachers.append((i+1, teacher[0], teacher[1], teacher[2], teacher[3], teacher[4]))
 
-    return teachers
+    return tuple(teachers)
 
 
 def get_subjects():
@@ -717,7 +755,7 @@ def get_subjects():
     for subject in result:
         subjects.append(subject[0])
 
-    return subjects
+    return tuple(subjects)
 
 
 def get_subjects_with_id():
@@ -726,12 +764,10 @@ def get_subjects_with_id():
     result = db.my_cursor.fetchall()
 
     subjects = []
-    i = 1
-    for subject in result:
-        subjects.append((i, subject[1]))
-        i += 1
+    for i, subject in enumerate(result):
+        subjects.append((i+1, subject[1]))
 
-    return subjects
+    return tuple(subjects)
 
 
 def get_subjects_with_teachers():
@@ -742,12 +778,10 @@ def get_subjects_with_teachers():
     result = db.my_cursor.fetchall()
 
     subjects = []
-    i = 1
-    for subject in result:
-        subjects.append((i, subject[1], subject[2]))
-        i += 1
+    for i, subject in enumerate(result):
+        subjects.append((i+1, subject[1], subject[2]))
 
-    return subjects
+    return tuple(subjects)
 
 
 def get_subjects_with_queues():
@@ -772,7 +806,6 @@ def get_subject_id(subject=None):
                FROM subjects
                WHERE title = %s;"""
     db.my_cursor.execute(query, (act_sb,))
-
     temp = db.my_cursor.fetchone()
 
     if temp:
@@ -863,6 +896,7 @@ async def clear_queue(message: types.Message):
 
 @dp.message_handler(state=Form.clear_queue_st)
 async def clear_queue(message: types.Message, state: FSMContext):
+    global active_student
     subjects = get_subjects()
     subjects_with_queues = get_subjects_with_queues()
 
@@ -898,8 +932,7 @@ async def clear_queue(message: types.Message, state: FSMContext):
                                      USING(id_queue)
                               JOIN subjects sb
                                      USING(subject_id)
-                              WHERE sb.title = %s;
-                              """
+                              WHERE sb.title = %s;"""
 
             db.my_cursor.execute(delete_users, (subject,))
             db.mydb.commit()
@@ -910,6 +943,7 @@ async def clear_queue(message: types.Message, state: FSMContext):
     else:
         await message.answer(f'🫥 предмету {subject} немає у списку'
                              f'\n\nДодати предмет: /add_subject')
+    active_student = 0
     await state.finish()
     return
 
@@ -921,7 +955,7 @@ async def delete_queue(message: types.Message):
     if subjects_with_queues:
         await Form.delete_queue_st.set()
         str = '📚 Список усіх предметів з чергами:\n'
-        for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
+        for i, subject in enumerate(subjects_with_queues):
             str += f'{i + 1}. {subject}\n'
         str += '\nДодати предмет: /add_subject\nСтворити чергу: /create_queue'
     else:
@@ -953,7 +987,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
         subject = data
     else:
         if 0 < data <= len(subjects):
-            subject = subjects[data - 1]
+            subject = subjects_with_queues[data - 1]
         else:
             await message.answer(f'❓ Предмет за номером {data} невідомий'
                                  f'\n\nДодати предмет: /add_subject\nСтворити чергу: /create_queue')
@@ -963,19 +997,17 @@ async def delete_queue(message: types.Message, state: FSMContext):
     if subject in subjects:
         if subject in subjects_with_queues:
             delete_users = """DELETE sign_ups FROM sign_ups
-                                          JOIN queues
-                                                 USING(id_queue)
-                                          JOIN subjects sb
-                                                 USING(subject_id)
-                                          WHERE sb.title = %s;
-                                          """
+                              JOIN queues
+                                  USING(id_queue)
+                              JOIN subjects sb
+                                  USING(subject_id)
+                              WHERE sb.title = %s;"""
             db.my_cursor.execute(delete_users, (subject,))
             db.mydb.commit()
             delete_users = """DELETE queues FROM queues
                               JOIN subjects sb
-                                     USING(subject_id)
-                              WHERE sb.title = %s;
-                              """
+                                  USING(subject_id)
+                              WHERE sb.title = %s;"""
             db.my_cursor.execute(delete_users, (subject,))
             db.mydb.commit()
             await message.answer(f'🗑 Черга на предмет {subject} видалена')
@@ -1366,7 +1398,7 @@ async def skip(message: types.Message):
 
         move_sign_up = f"""UPDATE sign_ups
                            SET position = position - 1
-                           WHERE id_queue = {id_queue} AND position """
+                           WHERE id_queue = {id_queue} AND position;"""
         if len(positions[range_of_indeces]) == 1:
             move_sign_up += f'= {positions[range_of_indeces][0]};'
         else:
@@ -1423,8 +1455,8 @@ async def all_teachers(message: types.Message):
         lst_teacher.append(teacher_subjects)
         teachers_lists.append(lst_teacher)
 
-    all_teachers_str = '👩‍🏫 Список усіх викладачів:\n'
     if teachers:
+        all_teachers_str = '👩‍🏫 Список усіх викладачів:\n'
         for i, name, username, phone, email, info, subjects in teachers_lists:
             username = username if username else '(немає)'
             phone = phone if phone else '(немає)'
@@ -1445,7 +1477,7 @@ async def all_teachers(message: types.Message):
             else:
                 all_teachers_str += teacher_str
     else:
-        all_teachers_str += '🫥 Список викладачів порожній\n'
+        all_teachers_str = '🫥 Список викладачів порожній\n'
 
     add_teacher_hint = '\nДодати викладача: /add_teacher'
     if len(all_teachers_str) + len(add_teacher_hint) < 4096:
@@ -1469,10 +1501,8 @@ async def all_subjects(message: types.Message):
 
     all_subjects_str = '📚 Список усіх предметів:\n'
     if subjects:
-        i = 1
-        for title, teacher_name in subjects:
-            all_subjects_str += f'\n{i}. {title}\nВикладає: {teacher_name}\n'
-            i += 1
+        for i, (title, teacher_name) in enumerate(subjects):
+            all_subjects_str += f'\n{i + 1}. {title}\nВикладає: {teacher_name}\n'
     else:
         all_subjects_str += '🫥 Список предметів порожній\n'
     all_subjects_str += '\nДодати предмет: /add_subject'
@@ -1490,10 +1520,8 @@ async def all_students(message: types.Message):
 
     all_students_str = '🧑‍🎓 Список усіх зареєстрованих студентів:\n\n'
     if students:
-        i = 1
-        for username, firstname in students:
-            all_students_str += f'{i}. {firstname} ({username})\n'
-            i += 1
+        for i, (username, firstname) in enumerate(students):
+            all_students_str += f'{i + 1}. {firstname} ({username})\n'
     else:
         all_students_str += '🫥 Список зареєстрованих студентів порожній\n'
 
@@ -1542,26 +1570,33 @@ async def sign_up(message: types.Message):
     user_name = user.first_name
 
     arguments = message.get_args().split(' ')
-    if len(arguments) not in (1, 2) or not arguments[0]:
-        await message.answer('🗿 Ви ввели неправильну кількість аргументів'
+    try:
+        position = int(arguments[-1])
+    except ValueError:
+        position = None
+    else:
+        del arguments[-1]
+    subject_input = ' '.join(arguments)
+
+    if arguments[0] == '':
+        await message.answer('🗿 Ви не ввели аргументи!'
                              '\n\n☝ Необхідно вказати назву або номер предмету, в чергу на який хочете записатися'
                              '\n\n💁 За бажанням також можна вказати конкретну позицію в черзі, якщо вона вільна'
                              '\n\n👉 Наприклад: /sign_up Математика або /sign_up Математика 5')
         return
 
-    data = arguments[0]
     subjects = get_subjects()
     sub_with_queue = get_subjects_with_queues()
 
     try:
-        data = int(data)
+        subject_number = int(subject_input)
     except ValueError:
-        subject = data
+        subject = subject_input
     else:
-        if 0 < data <= len(subjects):
-            subject = subjects[data - 1]
+        if 0 < subject_number <= len(subjects):
+            subject = subjects[subject_number - 1]
         else:
-            await message.answer(f'❓ Предмет за номером {data} невідомий\n\nДодати предмет: /add_subject')
+            await message.answer(f'❓ Предмет за номером {subject_number} невідомий\n\nДодати предмет: /add_subject')
             return
 
     if subject not in subjects:
@@ -1591,13 +1626,13 @@ async def sign_up(message: types.Message):
         max_pos = 0
 
     if max_pos > active_student:
-        await message.answer(f'📃 {user.first_name} вже записаний(-а) в цю чергу на місце {exist_pos[0]}'
+        await message.answer(f'📃 {user_name} вже записаний(-а) в цю чергу на місце {exist_pos[0]}'
                              f'\n\n☝ Щоб перезаписатися на інше місце, спочатку випишіться з черги, '
                              f'а тоді запишіться заново'
                              '\n\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>')
         return
 
-    if len(arguments) == 1:  # Випадок, коли юзер вказав лише назву предмету. Записуємо на перше вільне місце
+    if not position:  # Випадок, коли юзер вказав лише назву предмету. Записуємо на перше вільне місце
         get_all_from_queue = """SELECT position
                                 FROM sign_ups
                                 JOIN queues
@@ -1605,7 +1640,6 @@ async def sign_up(message: types.Message):
                                 JOIN subjects sb
                                     USING (subject_id)
                                 WHERE sb.title = %s"""
-
         db.my_cursor.execute(get_all_from_queue, (subject,))
         positions = db.my_cursor.fetchall()
         positions = tuple(map(lambda x: x[0], positions))
@@ -1617,14 +1651,14 @@ async def sign_up(message: types.Message):
             return
 
     else:  # Випадок, коли юзер вказав назву предмету та конкретне місце в черзі
-        try:
-            position = int(arguments[1])
-        except ValueError:
-            await message.answer('🗿 Ви неправильно вказуєте номер у черзі'
-                                 '\n\n☝ Необхідно вказати назву або номер предмету та бажаний номер у черзі,'
-                                 'в чергу якого бажаєте записатися'
-                                 '\n\n👉 Наприклад: /sign_up Математика 5')
-            return
+        # try:
+        #     position = int(arguments[1])
+        # except ValueError:
+        #     await message.answer('🗿 Ви неправильно вказуєте номер у черзі'
+        #                          '\n\n☝ Необхідно вказати назву або номер предмету та бажаний номер у черзі,'
+        #                          'в чергу якого бажаєте записатися'
+        #                          '\n\n👉 Наприклад: /sign_up Математика 5')
+        #     return
 
         if position < 0 or position > max_in_queue:
             await message.answer(f'🙆‍♀ Максимальний номер у черзі: {max_in_queue}')
@@ -1706,7 +1740,7 @@ async def sign_out(message: types.Message):
             get_queue_id = """SELECT id_queue 
                               FROM queues 
                               JOIN subjects sb
-                                USING (subject_id)
+                                  USING (subject_id)
                               WHERE sb.title = %s"""
             db.my_cursor.execute(get_queue_id, (subject,))
             id_queue = db.my_cursor.fetchone()[0]
@@ -1714,8 +1748,7 @@ async def sign_out(message: types.Message):
             check_sign_up = """SELECT position
                                FROM sign_ups
                                WHERE telegram_user_id = %s
-                               AND id_queue = %s;
-                               """
+                               AND id_queue = %s;"""
             db.my_cursor.execute(check_sign_up, (user_id, id_queue))
             position = db.my_cursor.fetchone()
 
