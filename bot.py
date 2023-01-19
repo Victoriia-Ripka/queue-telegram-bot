@@ -179,8 +179,8 @@ async def add_subject(message: types.Message, state: FSMContext):
     else:
         await state.finish()
         await message.answer('🗿 Ви ввели неправильну кількість параметрів. Необхідно 2 параметри: назва предмету'
-                             'і номер викладача зі списку\n\n'
-                             'Спробувати ще раз: /add_subject')
+                             'і номер викладача зі списку'
+                             '\n\nСпробувати ще раз: /add_subject')
         return
 
     new_subject = (title, teacher_id)
@@ -486,6 +486,11 @@ async def update_subject(message: types.Message, state: FSMContext):
     sql = 'UPDATE subjects SET title = %s, id_teacher = %s WHERE subject_id = %s;'
     try:
         db.my_cursor.execute(sql, new_subject)
+    except mysql.connector.IntegrityError:
+        await state.finish()
+        await message.answer('😉 Цей предмет уже доданий'
+                             '\n\nСпробувати ще раз: /update_subject\nДодати предмет: /add_subject')
+        return
     except mysql.connector.DatabaseError:
         await state.finish()
         await message.answer('🔧 Виникла проблема із запитом до бази даних'
@@ -622,6 +627,11 @@ async def update_teacher(message: types.Message, state: FSMContext):
              WHERE id_teacher = %s"""
     try:
         db.my_cursor.execute(sql, new_teacher_data)
+    except mysql.connector.IntegrityError:
+        await state.finish()
+        await message.answer('😉 Цей викладач уже доданий'
+                             '\n\nСпробувати ще раз: /update_teacher\nДодати викладача: /add_teacher')
+        return
     except mysql.connector.DatabaseError:
         await state.finish()
         await message.answer('😳 Ви використовуєте емоджи або інші незрозумілі символи чи вводите занадто довгі дані'
