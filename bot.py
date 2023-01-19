@@ -326,13 +326,16 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
         db.my_cursor.execute("SELECT info FROM teachers WHERE id_teacher = %s", (id,))
         info_exists = bool(db.my_cursor.fetchone()[0])
 
-
-
-
         new_info = (info, id)
         sql = 'UPDATE teachers SET info = %s WHERE id_teacher = %s;'
-        db.my_cursor.execute(sql, new_info)
-        db.mydb.commit()
+        try:
+            db.my_cursor.execute(sql, new_info)
+        except mysql.connector.DatabaseError:
+            await state.finish()
+            await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /add_teacher_info')
+            return
+        else:
+            db.mydb.commit()
     else:
         await state.finish()
         await message.answer('🗿 Ви ввели неправильну кількість параметрів. Необхідно 2 параметри через кому: '
@@ -341,14 +344,15 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
         return
 
     if db.my_cursor.rowcount < 1:
-        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /add_teacher_info')
+        await message.answer('🤔 Здається, Ви ввели інформацію, яка є ідентичною до вже існуючої'
+                             '\n\nСпробувати ще раз: /add_teacher_info')
     else:
         if info_exists:
             await message.answer(f'🔄 Інформацію оновлено')
         else:
             await message.answer(f'✅ Інформацію додано')
     await state.finish()
-
+    return
 
 @dp.message_handler(commands='update_subject')
 async def update_subject_start(message: types.Message):
