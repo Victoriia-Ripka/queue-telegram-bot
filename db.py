@@ -67,7 +67,7 @@ def create_tables():
         query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
                    (
                        `subject_id` INT          NOT NULL AUTO_INCREMENT,
-                       `title`      VARCHAR(100) NOT NULL,
+                       `title`      VARCHAR(200) NOT NULL,
                        `id_teacher` INT          NOT NULL,
                        PRIMARY KEY (`subject_id`),
                        UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
@@ -142,12 +142,13 @@ def create_tables():
                    (
                        `id_teacher`        INT          NOT NULL AUTO_INCREMENT,
                        `name`              VARCHAR(200) NOT NULL,
-                       `username_telegram` VARCHAR(45)  NULL,
+                       `username_telegram` VARCHAR(60)  NULL,
                        `phone_number`      VARCHAR(20)  NULL,
                        `email`             VARCHAR(70)  NULL,
                        `info`              TEXT(1000)   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
                        PRIMARY KEY (`id_teacher`),
-                       UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE
+                       UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
+                       UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE
                    )
                    ENGINE = InnoDB;"""
         my_cursor.execute(query)
