@@ -160,7 +160,10 @@ async def add_subject(message: types.Message, state: FSMContext):
         data.pop()
         title = separator.join(data)
 
-        if title in subjects:
+        subjects_lowercase = []
+        for subject in subjects:
+            subjects_lowercase.append(subject.lower())
+        if title.lower() in subjects_lowercase:
             await state.finish()
             await message.answer('😉 Цей предмет уже доданий'
                                  '\n\nДодати інший предмет: /add_subject\nДодати викладача: /add_teacher')
@@ -228,7 +231,10 @@ async def add_teacher(message: types.Message, state: FSMContext):
         return
 
     name = data[0]
-    if name in teachers:
+    teachers_lowercase = []
+    for teacher in teachers:
+        teachers_lowercase.append(teacher.lower())
+    if name.lower() in teachers_lowercase:
         await state.finish()
         await message.answer('😉 Цей викладач уже доданий'
                              '\n\nДодати іншого викладача: /add_teacher\nДодати предмет: /add_subject')
@@ -354,6 +360,7 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
     await state.finish()
     return
 
+
 @dp.message_handler(commands='update_subject')
 async def update_subject_start(message: types.Message):
     subjects = get_subjects_with_teachers()
@@ -423,15 +430,13 @@ async def update_subject(message: types.Message, state: FSMContext):
     subject_id = get_subject_id(previous_title)
 
     subjects_without_current = list(subjects)
-    print(subjects_without_current)
+    subjects_without_current_lowercase = []
     for subject in subjects:
         if subject == previous_title:
-            print(subject, previous_title)
             subjects_without_current.remove(previous_title)
-    print(subjects_without_current)
-
-    print(title, subjects)
-    if title in subjects_without_current:
+    for subject in subjects_without_current:
+        subjects_without_current_lowercase.append(subject.lower())
+    if title.lower() in subjects_without_current_lowercase:
         await state.finish()
         await message.answer(f'🙄 Предмет з назвою {title} вже є'
                              f'\n\nСпробувати ще раз: /update_subject')
@@ -536,13 +541,13 @@ async def update_teacher(message: types.Message, state: FSMContext):
     teacher_id = get_teacher_id(previous_name)
 
     teachers_without_current = list(teachers)
-    print(teachers_without_current)
+    teachers_without_current_lowercase = []
     for teacher in teachers:
         if teacher == previous_name:
             teachers_without_current.remove(previous_name)
-            print(previous_name, teacher)
-    print(teachers_without_current)
-    if name in teachers_without_current:
+    for teacher in teachers_without_current:
+        teachers_without_current_lowercase.append(teacher.lower())
+    if name.lower() in teachers_without_current_lowercase:
         await state.finish()
         await message.answer(f'🙄 Викладач з іменем {name} вже є'
                              f'\n\nСпробувати ще раз: /update_teacher')
