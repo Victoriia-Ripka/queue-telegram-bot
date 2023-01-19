@@ -1437,8 +1437,12 @@ async def skip(message: types.Message):
             if active_student != positions[-1]:
                 while next_student not in positions:
                     next_student += 1
-            queue = fetch_queue(get_subject_id())  # повторний фетчинг черги (вже оновленої)
-            await message.answer(active_queue_to_str(queue, False, next_student))
+
+            if next_student != active_student + 1 and position == active_student:
+                await next(message)
+            else:
+                queue = fetch_queue(get_subject_id())  # повторний фетчинг черги (вже оновленої)
+                await message.answer(active_queue_to_str(queue, False, next_student))
     else:
         await message.answer('🙄 Ви вже здали!')
     return
