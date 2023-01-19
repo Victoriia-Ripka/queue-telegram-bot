@@ -40,9 +40,10 @@ def start_settings():
         exit(3)
 
 
-def create_database():
+def create_database(group_id):
     if mydb and my_cursor:
-        query = """CREATE SCHEMA IF NOT EXISTS `queue-bot-kpi` DEFAULT CHARACTER SET utf8;"""
+        query = f"""CREATE SCHEMA IF NOT EXISTS `{group_id}`
+                    DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"""
         my_cursor.execute(query)
         mydb.commit()
     else:
@@ -50,9 +51,9 @@ def create_database():
         exit(3)
 
 
-def use_database():
+def use_database(group_id):
     if mydb and my_cursor:
-        query = """USE `queue-bot-kpi`;"""
+        query = f"""USE `{group_id}`;"""
         my_cursor.execute(query)
         mydb.commit()
     else:
@@ -63,30 +64,30 @@ def use_database():
 def create_tables():
     if mydb and my_cursor:
         # таблиця "Предмети"
-        query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Subjects`
+        query = """CREATE TABLE IF NOT EXISTS `Subjects`
                    (
                        `subject_id` INT          NOT NULL AUTO_INCREMENT,
-                       `title`      VARCHAR(100) NOT NULL,
+                       `title`      VARCHAR(200) NOT NULL,
                        `id_teacher` INT          NOT NULL,
                        PRIMARY KEY (`subject_id`),
                        UNIQUE INDEX `title_UNIQUE` (`title` ASC) VISIBLE,
                        UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
                        CONSTRAINT `fk_id_teacher`
                    	       FOREIGN KEY (`id_teacher`)
-                               REFERENCES `queue-bot-kpi`.`teachers` (`id_teacher`)
-                   		ON DELETE NO ACTION
-                   		ON UPDATE CASCADE
+                               REFERENCES `Teachers` (`id_teacher`)
+                   		       ON DELETE NO ACTION
+                   		       ON UPDATE CASCADE
                    )
                    ENGINE = InnoDB;"""
         my_cursor.execute(query)
         mydb.commit()
 
         # таблиця "Cтуденти"
-        query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Students`
+        query = """CREATE TABLE IF NOT EXISTS `Students`
                    (
-                       `telegram_user_id` CHAR(12)    NOT NULL,
-                       `username`         VARCHAR(45) NULL,
-                       `firstname`        VARCHAR(45) NULL,
+                       `telegram_user_id` CHAR(12)     NOT NULL,
+                       `username`         VARCHAR(70)  NULL,
+                       `firstname`        VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
                        PRIMARY KEY (`telegram_user_id`),
                        UNIQUE INDEX `telegram_user_id_UNIQUE` (`telegram_user_id` ASC) VISIBLE,
                        UNIQUE INDEX `username_UNIQUE` (`username` ASC) VISIBLE
@@ -96,7 +97,7 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Черги"
-        query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Queues`
+        query = """CREATE TABLE IF NOT EXISTS `Queues`
                    (
                        `id_queue`   INT NOT NULL AUTO_INCREMENT,
                        `subject_id` INT NOT NULL,
@@ -105,7 +106,7 @@ def create_tables():
                        UNIQUE INDEX `subject_id_UNIQUE` (`subject_id` ASC) VISIBLE,
                        CONSTRAINT `subject_id fk from Queue to Subjects`
                            FOREIGN KEY (`subject_id`)
-                               REFERENCES `queue-bot-kpi`.`Subjects` (`subject_id`)
+                               REFERENCES `Subjects` (`subject_id`)
                                ON DELETE CASCADE
                                ON UPDATE CASCADE
                    )
@@ -114,21 +115,21 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Записи"
-        query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Sign_ups`
+        query = """CREATE TABLE IF NOT EXISTS `Sign_ups`
                    (
-                       `id_sign_up`       INT         NOT NULL AUTO_INCREMENT,
-                       `id_queue`         INT         NOT NULL,
-                       `telegram_user_id` CHAR(12)    NOT NULL,
-                       `position`         INT         NOT NULL,
+                       `id_sign_up`       INT      NOT NULL AUTO_INCREMENT,
+                       `id_queue`         INT      NOT NULL,
+                       `telegram_user_id` CHAR(12) NOT NULL,
+                       `position`         INT      NOT NULL,
                        PRIMARY KEY (`id_sign_up`),
                        CONSTRAINT `id_queue fk from Sign_ups to Queue`
                            FOREIGN KEY (`id_queue`)
-                               REFERENCES `queue-bot-kpi`.`Queues` (`id_queue`)
+                               REFERENCES `Queues` (`id_queue`)
                                ON DELETE NO ACTION
                                ON UPDATE NO ACTION,
                      CONSTRAINT `telegram_user_id fk from Sign_ups to Students`
                            FOREIGN KEY (`telegram_user_id`)
-                               REFERENCES `queue-bot-kpi`.`Students` (`telegram_user_id`)
+                               REFERENCES `Students` (`telegram_user_id`)
                                ON DELETE NO ACTION
                                ON UPDATE NO ACTION
                    )
@@ -137,16 +138,17 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Викладачі"
-        query = """CREATE TABLE IF NOT EXISTS `queue-bot-kpi`.`Teachers`
+        query = """CREATE TABLE IF NOT EXISTS `Teachers`
                    (
-                       `id_teacher`        INT           NOT NULL AUTO_INCREMENT,
-                       `name`              VARCHAR(200)  NOT NULL,
-                       `username_telegram` VARCHAR(45)   NULL,
-                       `phone_number`      VARCHAR(20)   NULL,
-                       `email`             VARCHAR(60)   NULL,
-                       `info`              TEXT(1000)    NULL,
+                       `id_teacher`        INT          NOT NULL AUTO_INCREMENT,
+                       `name`              VARCHAR(200) NOT NULL,
+                       `username_telegram` VARCHAR(60)  NULL,
+                       `phone_number`      VARCHAR(20)  NULL,
+                       `email`             VARCHAR(70)  NULL,
+                       `info`              TEXT(1000)   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
                        PRIMARY KEY (`id_teacher`),
-                       UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE
+                       UNIQUE INDEX `id_teacher_UNIQUE` (`id_teacher` ASC) VISIBLE,
+                       UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE
                    )
                    ENGINE = InnoDB;"""
         my_cursor.execute(query)
@@ -174,12 +176,12 @@ def end_settings():
         exit(3)
 
 
-def delete_database():
+def delete_database(group_id):
     entered_password = input('Enter a password to drop a database:')
     if entered_password == password:
         print('\033[92mAuthorized! Access permitted!\033[0m')
         if mydb and my_cursor:
-            query = """DROP SCHEMA IF EXISTS `queue-bot-kpi`;"""
+            query = f"""DROP SCHEMA IF EXISTS `{group_id}`;"""
             my_cursor.execute(query)
             mydb.commit()
             print('\n\033[92mDatabase was successfully deleted!\033[0m')
