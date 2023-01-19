@@ -21,6 +21,8 @@ active_student = 0
 
 max_in_queue = 40
 
+bot_started = False
+
 
 class Form(StatesGroup):
     subject = State()
@@ -51,6 +53,7 @@ class Form(StatesGroup):
 @dp.message_handler(commands='help')
 async def help(message: types.Message):
     text = '⚙ Всі команди бота <b>Q Bot KPI</b>:\n' \
+           '\n/start — запустити бота для цієї групи' \
            '\n/help — вивести всі команди' \
            '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
            '\n/all_students — вивести всіх студентів' \
@@ -98,6 +101,9 @@ async def help(message: types.Message):
 
 @dp.message_handler(commands='add_subject')
 async def add_subject_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     subjects = get_subjects()
     str = ''
     if subjects:
@@ -214,6 +220,9 @@ async def add_subject(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='add_teacher')
 async def add_teacher_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await Form.teacher.set()
     teachers = get_teachers()
     if teachers:
@@ -311,6 +320,9 @@ async def add_teacher(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='add_teacher_info')
 async def add_teacher_info_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await Form.info.set()
     teachers = get_teachers()
     if teachers:
@@ -393,6 +405,9 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='update_subject')
 async def update_subject_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     subjects = get_subjects_with_teachers()
     if subjects:
         await Form.update_subject.set()
@@ -510,6 +525,9 @@ async def update_subject(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='update_teacher')
 async def update_teacher_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     teachers = get_teachers_with_all_info()
     if teachers:
         await Form.update_teacher.set()
@@ -652,6 +670,9 @@ async def update_teacher(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_subject')
 async def delete_subject_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await Form.delete_subject.set()
     subjects = get_subjects_with_id()
     str = '📚 Список існуючих предметів:\n'
@@ -719,6 +740,9 @@ async def delete_subject(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_teacher')
 async def delete_teacher_start(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await Form.delete_teacher.set()
     teachers = get_teachers_with_id()
     str = '👩‍🏫 Список викладачів:\n'
@@ -902,6 +926,9 @@ def get_subject_id(subject=None):
 
 @dp.message_handler(commands='create_queue')
 async def create_queue(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await Form.create_queue_st.set()
     subjects = get_subjects()
     if subjects:
@@ -972,6 +999,9 @@ async def create_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='clear_queue')
 async def clear_queue(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     subjects_with_queues = get_subjects_with_queues()
     if subjects_with_queues:
         await Form.clear_queue_st.set()
@@ -1046,6 +1076,9 @@ async def clear_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_queue')
 async def delete_queue(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     subjects_with_queues = get_subjects_with_queues()
 
     if subjects_with_queues:
@@ -1131,6 +1164,9 @@ async def delete_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='show_needed_queue')
 async def show_needed_queue(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await Form.show_queue_st.set()
     subjects_with_queues = get_subjects_with_queues()
 
@@ -1326,6 +1362,9 @@ def add_user(user):
 
 @dp.message_handler(commands='start_queue')
 async def start_queue(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
 
     subjects_with_queues = get_subjects_with_queues()
 
@@ -1390,6 +1429,9 @@ async def start_queue(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='next')
 async def next(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     global active_student
     global active_subject
 
@@ -1434,6 +1476,9 @@ async def next(message: types.Message):
 
 @dp.message_handler(commands='skip')
 async def skip(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     if not active_subject:
         await message.answer('🙄 Пропустити студента(-ів) можна лише в активній черзі!')
         return
@@ -1558,11 +1603,17 @@ async def skip(message: types.Message):
 
 @dp.message_handler(commands='show_current_student')
 async def show_current_student(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     await message.answer(get_sign_up())
 
 
 @dp.message_handler(commands='all_teachers')
 async def all_teachers(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     teachers = get_teachers_with_all_info()
     teachers_lists = []
     for teacher in teachers:
@@ -1618,6 +1669,9 @@ async def all_teachers(message: types.Message):
 
 @dp.message_handler(commands='all_subjects')
 async def all_subjects(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     query = """SELECT subjects.title, teachers.name
                FROM subjects
                LEFT OUTER JOIN teachers
@@ -1640,6 +1694,9 @@ async def all_subjects(message: types.Message):
 
 @dp.message_handler(commands='all_students')
 async def all_students(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     query = """SELECT username, firstname FROM students
                ORDER BY firstname;"""
     db.my_cursor.execute(query)
@@ -1658,6 +1715,9 @@ async def all_students(message: types.Message):
 
 @dp.message_handler(commands='set_max')
 async def set_max(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     arguments = message.get_args()
 
     try:
@@ -1691,6 +1751,9 @@ def get_first_free_pos(positions):
 
 @dp.message_handler(commands='sign_up')
 async def sign_up(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     user = message.from_user
     add_user(user)
     user_id = user.id
@@ -1839,6 +1902,9 @@ async def sign_up(message: types.Message):
 
 @dp.message_handler(commands='sign_out')
 async def sign_out(message: types.Message):
+    if not bot_started:
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
     user = message.from_user
     add_user(user)
     user_id = user.id
@@ -1909,21 +1975,38 @@ async def sign_out(message: types.Message):
     return
 
 
-if __name__ == '__main__':
-    try:
-        print('\033[93mInitializing database...\n')
-        db.connect_to_server()
-        print('\033[92mSuccessfully connected to the database')
+@dp.message_handler(commands='start')
+async def start(message: types.Message):
+    group_id = str(message.chat.id)
+    is_group = True if group_id[0] == '-' else False
+    if is_group:
+        await message.answer(f"🫡 Розпочинаю роботу в групі {message.chat.title}")
+    else:
+        await message.answer(f"😊 {message.from_user.first_name}, я працюю лише в групах. Додай мене в групу")
+        return
 
+    try:
         db.start_settings()
-        db.create_database()
-        db.use_database()
+        db.create_database(group_id)
+        db.use_database(group_id)
         db.create_tables()
         db.end_settings()
-        print('All tables are ready')
-        print('\n\033[1mBOT STARTED\n\033[0m')
+
+        print(f'\nAll tables for group {message.chat.title} are ready')
+
+        global bot_started
+        bot_started = True
+        print(f'\n\033[1mBOT STARTED for group {message.chat.title}\n\033[0m')
+
+    except Exception as error:
+        print('Cause: {}'.format(error))
+
+if __name__ == '__main__':
+    try:
+        print('\033[93mInitializing database server...\n')
+        db.connect_to_server()
+        print('\033[92mSuccessfully connected to the database server\n')
 
         executor.start_polling(dp, skip_updates=True)
-
     except Exception as error:
         print('Cause: {}'.format(error))
