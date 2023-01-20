@@ -51,20 +51,20 @@ def create_database(group_id):
         exit(3)
 
 
-def use_database(group_id):
-    if mydb and my_cursor:
-        query = f"""USE `{group_id}`;"""
-        my_cursor.execute(query)
-        mydb.commit()
-    else:
-        print('\033[91mQueryError: No valid connection to database for commiting a query\033[0m')
-        exit(3)
+# def use_database(group_id):
+#     if mydb and my_cursor:
+#         query = f"""USE `{group_id}`;"""
+#         my_cursor.execute(query)
+#         mydb.commit()
+#     else:
+#         print('\033[91mQueryError: No valid connection to database for commiting a query\033[0m')
+#         exit(3)
 
 
-def create_tables():
+def create_tables(group_id):
     if mydb and my_cursor:
         # таблиця "Предмети"
-        query = """CREATE TABLE IF NOT EXISTS `Subjects`
+        query = f"""CREATE TABLE IF NOT EXISTS `{group_id}`.`Subjects`
                    (
                        `subject_id` INT          NOT NULL AUTO_INCREMENT,
                        `title`      VARCHAR(200) NOT NULL,
@@ -83,7 +83,7 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Cтуденти"
-        query = """CREATE TABLE IF NOT EXISTS `Students`
+        query = f"""CREATE TABLE IF NOT EXISTS `{group_id}`.`Students`
                    (
                        `telegram_user_id` CHAR(12)     NOT NULL,
                        `username`         VARCHAR(70)  NULL,
@@ -97,7 +97,7 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Черги"
-        query = """CREATE TABLE IF NOT EXISTS `Queues`
+        query = f"""CREATE TABLE IF NOT EXISTS `{group_id}`.`Queues`
                    (
                        `id_queue`   INT NOT NULL AUTO_INCREMENT,
                        `subject_id` INT NOT NULL,
@@ -115,7 +115,7 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Записи"
-        query = """CREATE TABLE IF NOT EXISTS `Sign_ups`
+        query = f"""CREATE TABLE IF NOT EXISTS `{group_id}`.`Sign_ups`
                    (
                        `id_sign_up`       INT      NOT NULL AUTO_INCREMENT,
                        `id_queue`         INT      NOT NULL,
@@ -138,7 +138,7 @@ def create_tables():
         mydb.commit()
 
         # таблиця "Викладачі"
-        query = """CREATE TABLE IF NOT EXISTS `Teachers`
+        query = f"""CREATE TABLE IF NOT EXISTS `{group_id}`.`Teachers`
                    (
                        `id_teacher`        INT          NOT NULL AUTO_INCREMENT,
                        `name`              VARCHAR(200) NOT NULL,
@@ -151,6 +151,20 @@ def create_tables():
                        UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE
                    )
                    ENGINE = InnoDB;"""
+        my_cursor.execute(query)
+        mydb.commit()
+
+        # таблиця "Системні налаштування"
+        query = f"""CREATE TABLE IF NOT EXISTS `{group_id}`.`System_settings`
+                        (
+                            `max_in_queue`    INT          NOT NULL DEFAULT 40,
+                            `active_subject`  VARCHAR(200) NOT NULL DEFAULT '',
+                            `active_student`  INT          NOT NULL DEFAULT 0
+                        )
+                        ENGINE = InnoDB;"""
+        my_cursor.execute(query)
+        mydb.commit()
+        query = f'INSERT INTO `{group_id}`.`System_settings` () VALUES ();'
         my_cursor.execute(query)
         mydb.commit()
     else:
