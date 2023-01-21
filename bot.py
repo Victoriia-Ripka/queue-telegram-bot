@@ -3,9 +3,9 @@ import logging
 import mysql.connector
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 import db
 
@@ -16,10 +16,6 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 logging.basicConfig(level=logging.INFO)
 
-# active_subject = ''
-# active_student = 0
-
-# max_in_queue = 40
 
 class Form(StatesGroup):
     subject = State()
@@ -124,7 +120,7 @@ async def add_subject_start(message: types.Message):
         string += '\n\nДодати викладача: /add_teacher'
 
     await message.answer(string)
-    return 
+    return
 
 
 @dp.message_handler(state=Form.subject)
@@ -1546,7 +1542,7 @@ async def skip(message: types.Message):
                       FROM `{group_id}`.queues
                       JOIN `{group_id}`.subjects sb
                           USING (subject_id)
-                      WHERE sb.title = %s"""
+                      WHERE sb.title = %s;"""
     db.my_cursor.execute(get_queue_id, (active_subject,))
     id_queue = db.my_cursor.fetchone()[0]
 
@@ -1589,26 +1585,31 @@ async def skip(message: types.Message):
         else:
             db.mydb.commit()
 
-        move_sign_up = f"""UPDATE `{group_id}`.sign_ups
+        move_sign_ups = f"""UPDATE `{group_id}`.sign_ups
                            SET position = position - 1
-                           WHERE id_queue = {id_queue} AND position;"""
+                           WHERE id_queue = {id_queue} AND position """  # (...)
         if len(positions[range_of_indeces]) == 1:
-            move_sign_up += f'= {positions[range_of_indeces][0]};'
+            move_sign_ups += f'= {positions[range_of_indeces][0]};'
         else:
-            move_sign_up += f'IN {positions[range_of_indeces]};'
+            move_sign_ups += f'IN {positions[range_of_indeces]};'
+
+        print(move_sign_ups)
         try:
-            db.my_cursor.execute(move_sign_up)
+            db.my_cursor.execute(move_sign_ups)
         except mysql.connector.DatabaseError:
             await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /skip')
             return
         else:
             db.mydb.commit()
-        make_sign_up = f'INSERT INTO `{group_id}`.sign_ups' \
-                       f'VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});'
+
+        make_sign_up = f"""INSERT INTO `{group_id}`.sign_ups
+                           VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});"""
+        print(make_sign_up)
         try:
             db.my_cursor.execute(make_sign_up)
         except mysql.connector.DatabaseError:
-            await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /skip')
+            await message.answer('🔧 Виникла проблема із запитом до бази даних'
+                                 '\n\nСпробувати ще раз: /skip <i>{кількість місць (за замовчуванням: 1)}</i>')
             return
         else:
             db.mydb.commit()
