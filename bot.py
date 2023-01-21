@@ -3,9 +3,9 @@ import logging
 import mysql.connector
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 import db
 
@@ -16,15 +16,13 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 logging.basicConfig(level=logging.INFO)
 
-# active_subject = ''
-# active_student = 0
-
-# max_in_queue = 40
 
 class Form(StatesGroup):
     subject = State()
     teacher = State()
-    info = State()
+
+    add_info = State()
+    delete_info = State()
 
     update_subject = State()
     update_teacher = State()
@@ -124,7 +122,7 @@ async def add_subject_start(message: types.Message):
         string += '\n\nДодати викладача: /add_teacher'
 
     await message.answer(string)
-    return 
+    return
 
 
 @dp.message_handler(state=Form.subject)
@@ -149,7 +147,7 @@ async def add_subject(message: types.Message, state: FSMContext):
             number = int(data[-1])
         except ValueError:
             await state.finish()
-            await message.answer(f'1️⃣  Після назви повинен бути вказаний номер викладача зі списку'
+            await message.answer(f'1️⃣ Після назви повинен бути вказаний номер викладача зі списку'
                                  f'\n\nСпробувати ще раз: /add_subject')
             return
 
@@ -223,9 +221,9 @@ async def add_teacher_start(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.teacher.set()
     teachers = get_teachers(group_id)
     if teachers:
+        await Form.teacher.set()
         string = '👩‍🏫 Список уже доданих викладачів:\n'
         for subject, i in zip(teachers, range(len(teachers))):
             string += f'{i + 1}. {subject}\n'
@@ -322,13 +320,13 @@ async def add_teacher(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='add_teacher_info')
 async def add_teacher_info_start(message: types.Message):
-    group_id = str(message.chat.id)
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.info.set()
+    group_id = str(message.chat.id)
     teachers = get_teachers(group_id)
     if teachers:
+        await Form.add_info.set()
         string = '👩‍🏫 Список викладачів:\n'
         for teacher, i in zip(teachers, range(len(teachers))):
             string += f'{i + 1}. {teacher}\n'
@@ -339,7 +337,7 @@ async def add_teacher_info_start(message: types.Message):
     await message.answer(string)
 
 
-@dp.message_handler(state=Form.info)
+@dp.message_handler(state=Form.add_info)
 async def add_teacher_info(message: types.Message, state: FSMContext):
     group_id = str(message.chat.id)
     data = message.values['text'].split(', ')
@@ -359,7 +357,7 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
             number = int(data[0])
         except ValueError:
             await state.finish()
-            await message.answer('1️⃣  Першим повинен бути номер\n\nСпробувати ще раз: /add_teacher_info')
+            await message.answer('1️⃣ Першим повинен бути номер\n\nСпробувати ще раз: /add_teacher_info')
             return
         separator = ' '
         del data[0]
@@ -400,9 +398,81 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
                              '\n\nСпробувати ще раз: /add_teacher_info')
     else:
         if info_exists:
-            await message.answer(f'🔄 Інформацію оновлено')
+            await message.answer(f'🔄 Інформацію про викладача {name} оновлено')
         else:
-            await message.answer(f'✅ Інформацію додано')
+            await message.answer(f'✅ Інформацію про викладача {name} додано')
+    await state.finish()
+    return
+
+
+@dp.message_handler(commands='delete_teacher_info')
+async def delete_teacher_info_start(message: types.Message):
+    if not check_database(message):
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
+    group_id = str(message.chat.id)
+    teachers = get_teachers(group_id)
+    if teachers:
+        await Form.delete_info.set()
+        string = '👩‍🏫 Список викладачів:\n'
+        for teacher, i in zip(teachers, range(len(teachers))):
+            string += f'{i + 1}. {teacher}\n'
+        string += '\n📝 Введіть номер викладача зі списку, інформацію про якого Ви хочете видалити'
+    else:
+        string = '🫥 Список викладачів порожній'
+        string += '\n\nДодати викладача: /add_teacher'
+    await message.answer(string)
+
+
+@dp.message_handler(state=Form.delete_info)
+async def delete_teacher_info(message: types.Message, state: FSMContext):
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
+    group_id = str(message.chat.id)
+    teachers = get_teachers(group_id)
+
+    data = message.values['text'].split(' ')
+    print('\033[0m')
+    print(data, type(data))
+    if len(data) != 1:
+        await state.finish()
+        await message.answer('🗿 Ви ввели неправильну кількість параметрів. Потрібно ввести одне число — '
+                             'номер викладача зі списку, інформацію про якого ви бажаєте видалити'
+                             '\n\nСпробувати ще раз: /delete_teacher_info')
+        return
+    data = data[0]
+    print(data, type(data))
+
+    try:
+        teacher_number = int(data)
+    except ValueError:
+        await state.finish()
+        await message.answer('1️⃣ Введіть число — номер викладача зі списку, інформацію про якого ви бажаєте видалити'
+                             '\n\nСпробувати ще раз: /delete_teacher_info')
+        return
+
+    teacher_name = teachers[teacher_number-1]
+    print(teacher_name, type(teacher_name))
+
+    query = f"""UPDATE `{group_id}`.teachers SET info = NULL WHERE name = %s;"""
+    try:
+        db.my_cursor.execute(query, (teacher_name,))
+    except mysql.connector.DatabaseError:
+        await state.finish()
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher_info')
+        return
+    else:
+        db.mydb.commit()
+
+    await message.answer(f'🚮 Інформацію про викладача {teacher_name} було видалено')
     await state.finish()
     return
 
@@ -683,12 +753,16 @@ async def delete_subject_start(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.delete_subject.set()
-    subjects = get_subjects_with_id(group_id)
-    string = '📚 Список існуючих предметів:\n'
-    for subject, i in zip(subjects, range(len(subjects))):
-        string += f'{i + 1}. {subject[1]}\n'
-    string += '\n📝 Напишіть номер предмету, який пострібно видалити, зі списку'
+    subjects = get_subjects(group_id)
+    if subjects:
+        await Form.delete_subject.set()
+        string = '📚 Список існуючих предметів:\n\n'
+        for subject, i in zip(subjects, range(len(subjects))):
+            string += f'{i + 1}. {subject}\n'
+        string += '\n📝 Напишіть номер предмету, який пострібно видалити, зі списку'
+    else:
+        string = '🫥 Список предметів порожній\n'
+        string += '\nДодати предмет: /add_subject'
     await message.answer(string)
     return 
 
@@ -751,19 +825,25 @@ async def delete_subject(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_teacher')
 async def delete_teacher_start(message: types.Message):
-    group_id = str(message.chat.id)
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.delete_teacher.set()
-    teachers = get_teachers_with_id(group_id)
-    string = '👩‍🏫 Список викладачів:\n'
-    for teacher, i in zip(teachers, range(len(teachers))):
-        string += f'{i + 1}. {teacher[1]}\n'
-    string += '\n📝 Введіть номер викладача, якого потрібно видалити, зі списку\n\n' \
-              '☝ Якщо викладач читає якийсь предмет, то видалити його неможливо. ' \
-              'В такому випадку або видаліть предмет, який викладає цей викладач, або змініть викладача для предмету'
-    string += '\n\nВидалити предмет: /delete_subject\nЗмінити викладача для предмету: /update_subject'
+    group_id = str(message.chat.id)
+
+    teachers = get_teachers(group_id)
+    if teachers:
+        await Form.delete_teacher.set()
+        string = '👩‍🏫 Список викладачів:\n'
+        for teacher, i in zip(teachers, range(len(teachers))):
+            string += f'{i + 1}. {teacher}\n'
+        string += '\n📝 Введіть номер викладача, якого потрібно видалити, зі списку\n\n' \
+                  '☝ Якщо викладач читає якийсь предмет, то видалити його неможливо. ' \
+                  'В такому випадку або видаліть предмет, який викладає цей викладач, ' \
+                  'або змініть викладача для предмету'
+        string += '\n\nВидалити предмет: /delete_subject\nЗмінити викладача для предмету: /update_subject'
+    else:
+        string = '🫥 Список викладачів порожній\n'
+        string += '\nДодати викладача: /add_teacher'
     await message.answer(string)
     return
 
@@ -881,16 +961,16 @@ def get_subjects(group_id):
     return tuple(subjects)
 
 
-def get_subjects_with_id(group_id):
-    db.my_cursor.execute(f"""SELECT subject_id, title FROM `{group_id}`.subjects
-                            ORDER BY subject_id;""")
-    result = db.my_cursor.fetchall()
-
-    subjects = []
-    for i, subject in enumerate(result):
-        subjects.append((i+1, subject[1]))
-
-    return tuple(subjects)
+# def get_subjects_with_id(group_id):
+#     db.my_cursor.execute(f"""SELECT subject_id, title FROM `{group_id}`.subjects
+#                             ORDER BY subject_id;""")
+#     result = db.my_cursor.fetchall()
+#
+#     subjects = []
+#     for i, subject in enumerate(result):
+#         subjects.append((i+1, subject[1]))
+#
+#     return tuple(subjects)
 
 
 def get_subjects_with_teachers(group_id):
@@ -909,9 +989,9 @@ def get_subjects_with_teachers(group_id):
 
 def get_subjects_with_queues(group_id):
     db.my_cursor.execute(f"""SELECT DISTINCT title FROM `{group_id}`.subjects
-                      WHERE subject_id IN
-                      (SELECT subject_id FROM `{group_id}`.queues)
-                      ORDER BY subject_id;""")
+                         WHERE subject_id IN
+                         (SELECT subject_id FROM `{group_id}`.queues)
+                         ORDER BY subject_id;""")
     result = db.my_cursor.fetchall()
 
     subjects_with_queues = []
@@ -929,8 +1009,8 @@ def get_subject_id(group_id, subject=None):
     subject = subject if subject else active_subject
 
     query = f"""SELECT subject_id  # неможливо скористатися f-стрічкою через предмети, що мають у назві апостроф
-               FROM `{group_id}`.subjects
-               WHERE title = %s;"""
+                FROM `{group_id}`.subjects
+                WHERE title = %s;"""
     db.my_cursor.execute(query, (subject,))
     temp = db.my_cursor.fetchone()
 
@@ -947,9 +1027,9 @@ async def create_queue(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.create_queue_st.set()
     subjects = get_subjects(group_id)
     if subjects:
+        await Form.create_queue_st.set()
         string = '📝 Оберіть предмет, на який хочете створити чергу:\n\n'
         for subject, i in zip(subjects, range(len(subjects))):
             string += f'{i + 1}. {subject}\n'
@@ -1069,7 +1149,7 @@ async def clear_queue(message: types.Message, state: FSMContext):
 
     if subject in subjects:
         if subject in subjects_with_queues:
-            delete_users = f"""DELETE sign_ups FROM `{group_id}`.sign_ups
+            delete_users = f"""DELETE `{group_id}`.sign_ups FROM `{group_id}`.sign_ups
                               JOIN `{group_id}`.queues
                                      USING(id_queue)
                               JOIN `{group_id}`.subjects sb
@@ -1149,7 +1229,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
 
     if subject in subjects:
         if subject in subjects_with_queues:
-            delete_users = f"""DELETE sign_ups FROM `{group_id}`.sign_ups
+            delete_users = f"""DELETE `{group_id}`.sign_ups FROM `{group_id}`.sign_ups
                               JOIN `{group_id}`.queues
                                   USING(id_queue)
                               JOIN `{group_id}`.subjects sb
@@ -1163,7 +1243,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
                 return
             else:
                 db.mydb.commit()
-            delete_users = f"""DELETE queues FROM `{group_id}`.queues
+            delete_users = f"""DELETE `{group_id}`.queues FROM `{group_id}`.queues
                               JOIN `{group_id}`.subjects sb
                                   USING(subject_id)
                               WHERE sb.title = %s;"""
@@ -1192,10 +1272,10 @@ async def show_needed_queue(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.show_queue_st.set()
     subjects_with_queues = get_subjects_with_queues(group_id)
 
     if subjects_with_queues:
+        await Form.show_queue_st.set()
         string = '📝 Виберіть предмет, на який шукаєте чергу:\n'
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             string += f'{i + 1}. {subject}\n'
@@ -1239,7 +1319,7 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
             await state.finish()
             return
 
-    queue_str = queue_to_str(fetch_queue(group_id, get_subject_id(subject)))
+    queue_str = queue_to_str(fetch_queue(group_id, get_subject_id(group_id, subject)))
 
     await message.answer(queue_str)
 
@@ -1315,10 +1395,7 @@ def queue_to_str(queue):
     queue_str = ''
     if queue:
         for i, username, firstname in queue:
-            if username:
-                queue_str += f'{i}. {firstname} ({username})\n'
-            else:
-                queue_str += f'{i}. {firstname}\n'
+            queue_str += f'{i}. {firstname} ({username})\n' if username else f'{i}. {firstname}\n'
     else:
         queue_str += '🫥 Черга порожня\n'
     queue_str += '\nЗаписатися в чергу: /sign_up <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
@@ -1335,33 +1412,18 @@ def active_queue_to_str(queue, end, active_student=0, next_student=0):
     if queue:
         if end:
             for i, username, firstname in queue:
-                if username:
-                    queue_str += f'<del>{i}. {firstname} ({username})</del>\n'
-                else:
-                    queue_str += f'<del>{i}. {firstname}</del>\n'
+                queue_str += f'<del>{i}. {firstname} ({username})</del>\n' if username else f'<del>{i}. {firstname}</del>\n'
             queue_str += '\nЧерга закінчена 🔚\n'
         else:
             for i, username, firstname in queue:
                 if i == active_student:
-                    if username:
-                        queue_str += f'{i}. <b>{firstname} (@{username})</b> 🟢\n'
-                    else:
-                        queue_str += f'{i}. <b>{firstname}</b> 🟢\n'
+                    queue_str += f'{i}. <b>{firstname} (@{username})</b> 🟢\n' if username else f'{i}. <b>{firstname}</b> 🟢\n'
                 elif i == next_student:
-                    if username:
-                        queue_str += f'{i}. <i>{firstname} (@{username}) — приготуватися</i>\n'
-                    else:
-                        queue_str += f'{i}. <i>{firstname} — приготуватися</i>\n'
+                    queue_str += f'{i}. <i>{firstname} (@{username}) — приготуватися</i>\n' if username else f'{i}. <i>{firstname} — приготуватися</i>\n'
                 elif i < active_student:
-                    if username:
-                        queue_str += f'<del>{i}. {firstname} ({username})</del>\n'
-                    else:
-                        queue_str += f'<del>{i}. {firstname}</del>\n'
+                    queue_str += f'<del>{i}. {firstname} ({username})</del>\n' if username else f'<del>{i}. {firstname}</del>\n'
                 else:
-                    if username:
-                        queue_str += f'{i}. {firstname} ({username})\n'
-                    else:
-                        queue_str += f'{i}. {firstname}\n'
+                    queue_str += f'{i}. {firstname} ({username})\n' if username else f'{i}. {firstname}\n'
             queue_str += '\nЧерга активна ☑\n'
     else:
         queue_str += '🫥 Черга порожня\n'
@@ -1514,8 +1576,8 @@ async def next(message: types.Message):
 
         active_subject = ''
         active_student = 0
-        db.my_cursor.execute(f"UPDATE `{group_id}`.system_settings SET `active_student` = {active_student}, "
-                                                                     f"`active_subject` = '{active_subject}';")
+        db.my_cursor.execute(f"UPDATE `{group_id}`.system_settings "
+                             f"SET `active_student` = {active_student}, `active_subject` = '{active_subject}';")
         db.mydb.commit()
 
     await message.answer(queue_str)
@@ -1554,7 +1616,7 @@ async def skip(message: types.Message):
         try:
             arguments = int(arguments)
         except ValueError:
-            await message.answer('1️⃣  Аргумент повинен бути лише числом!')
+            await message.answer('1️⃣ Аргумент повинен бути лише числом!')
             return
     else:
         arguments = 1
@@ -1564,7 +1626,7 @@ async def skip(message: types.Message):
                       FROM `{group_id}`.queues
                       JOIN `{group_id}`.subjects sb
                           USING (subject_id)
-                      WHERE sb.title = %s"""
+                      WHERE sb.title = %s;"""
     db.my_cursor.execute(get_queue_id, (active_subject,))
     id_queue = db.my_cursor.fetchone()[0]
 
@@ -1607,26 +1669,31 @@ async def skip(message: types.Message):
         else:
             db.mydb.commit()
 
-        move_sign_up = f"""UPDATE `{group_id}`.sign_ups
+        move_sign_ups = f"""UPDATE `{group_id}`.sign_ups
                            SET position = position - 1
-                           WHERE id_queue = {id_queue} AND position;"""
+                           WHERE id_queue = {id_queue} AND position """  # (...)
         if len(positions[range_of_indeces]) == 1:
-            move_sign_up += f'= {positions[range_of_indeces][0]};'
+            move_sign_ups += f'= {positions[range_of_indeces][0]};'
         else:
-            move_sign_up += f'IN {positions[range_of_indeces]};'
+            move_sign_ups += f'IN {positions[range_of_indeces]};'
+
+        print(move_sign_ups)
         try:
-            db.my_cursor.execute(move_sign_up)
+            db.my_cursor.execute(move_sign_ups)
         except mysql.connector.DatabaseError:
             await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /skip')
             return
         else:
             db.mydb.commit()
-        make_sign_up = f'INSERT INTO `{group_id}`.sign_ups' \
-                       f'VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});'
+
+        make_sign_up = f"""INSERT INTO `{group_id}`.sign_ups
+                           VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});"""
+        print(make_sign_up)
         try:
             db.my_cursor.execute(make_sign_up)
         except mysql.connector.DatabaseError:
-            await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /skip')
+            await message.answer('🔧 Виникла проблема із запитом до бази даних'
+                                 '\n\nСпробувати ще раз: /skip <i>{кількість місць (за замовчуванням: 1)}</i>')
             return
         else:
             db.mydb.commit()
