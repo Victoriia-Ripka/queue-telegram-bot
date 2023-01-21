@@ -221,9 +221,9 @@ async def add_teacher_start(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.teacher.set()
     teachers = get_teachers(group_id)
     if teachers:
+        await Form.teacher.set()
         string = '👩‍🏫 Список уже доданих викладачів:\n'
         for subject, i in zip(teachers, range(len(teachers))):
             string += f'{i + 1}. {subject}\n'
@@ -753,12 +753,16 @@ async def delete_subject_start(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.delete_subject.set()
-    subjects = get_subjects_with_id(group_id)
-    string = '📚 Список існуючих предметів:\n'
-    for subject, i in zip(subjects, range(len(subjects))):
-        string += f'{i + 1}. {subject[1]}\n'
-    string += '\n📝 Напишіть номер предмету, який пострібно видалити, зі списку'
+    subjects = get_subjects(group_id)
+    if subjects:
+        await Form.delete_subject.set()
+        string = '📚 Список існуючих предметів:\n\n'
+        for subject, i in zip(subjects, range(len(subjects))):
+            string += f'{i + 1}. {subject}\n'
+        string += '\n📝 Напишіть номер предмету, який пострібно видалити, зі списку'
+    else:
+        string = '🫥 Список предметів порожній\n'
+        string += '\nДодати предмет: /add_subject'
     await message.answer(string)
     return 
 
@@ -821,19 +825,25 @@ async def delete_subject(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='delete_teacher')
 async def delete_teacher_start(message: types.Message):
-    group_id = str(message.chat.id)
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.delete_teacher.set()
-    teachers = get_teachers_with_id(group_id)
-    string = '👩‍🏫 Список викладачів:\n'
-    for teacher, i in zip(teachers, range(len(teachers))):
-        string += f'{i + 1}. {teacher[1]}\n'
-    string += '\n📝 Введіть номер викладача, якого потрібно видалити, зі списку\n\n' \
-              '☝ Якщо викладач читає якийсь предмет, то видалити його неможливо. ' \
-              'В такому випадку або видаліть предмет, який викладає цей викладач, або змініть викладача для предмету'
-    string += '\n\nВидалити предмет: /delete_subject\nЗмінити викладача для предмету: /update_subject'
+    group_id = str(message.chat.id)
+
+    teachers = get_teachers(group_id)
+    if teachers:
+        await Form.delete_teacher.set()
+        string = '👩‍🏫 Список викладачів:\n'
+        for teacher, i in zip(teachers, range(len(teachers))):
+            string += f'{i + 1}. {teacher}\n'
+        string += '\n📝 Введіть номер викладача, якого потрібно видалити, зі списку\n\n' \
+                  '☝ Якщо викладач читає якийсь предмет, то видалити його неможливо. ' \
+                  'В такому випадку або видаліть предмет, який викладає цей викладач, ' \
+                  'або змініть викладача для предмету'
+        string += '\n\nВидалити предмет: /delete_subject\nЗмінити викладача для предмету: /update_subject'
+    else:
+        string = '🫥 Список викладачів порожній\n'
+        string += '\nДодати викладача: /add_teacher'
     await message.answer(string)
     return
 
@@ -951,16 +961,16 @@ def get_subjects(group_id):
     return tuple(subjects)
 
 
-def get_subjects_with_id(group_id):
-    db.my_cursor.execute(f"""SELECT subject_id, title FROM `{group_id}`.subjects
-                            ORDER BY subject_id;""")
-    result = db.my_cursor.fetchall()
-
-    subjects = []
-    for i, subject in enumerate(result):
-        subjects.append((i+1, subject[1]))
-
-    return tuple(subjects)
+# def get_subjects_with_id(group_id):
+#     db.my_cursor.execute(f"""SELECT subject_id, title FROM `{group_id}`.subjects
+#                             ORDER BY subject_id;""")
+#     result = db.my_cursor.fetchall()
+#
+#     subjects = []
+#     for i, subject in enumerate(result):
+#         subjects.append((i+1, subject[1]))
+#
+#     return tuple(subjects)
 
 
 def get_subjects_with_teachers(group_id):
@@ -979,9 +989,9 @@ def get_subjects_with_teachers(group_id):
 
 def get_subjects_with_queues(group_id):
     db.my_cursor.execute(f"""SELECT DISTINCT title FROM `{group_id}`.subjects
-                      WHERE subject_id IN
-                      (SELECT subject_id FROM `{group_id}`.queues)
-                      ORDER BY subject_id;""")
+                         WHERE subject_id IN
+                         (SELECT subject_id FROM `{group_id}`.queues)
+                         ORDER BY subject_id;""")
     result = db.my_cursor.fetchall()
 
     subjects_with_queues = []
@@ -999,8 +1009,8 @@ def get_subject_id(group_id, subject=None):
     subject = subject if subject else active_subject
 
     query = f"""SELECT subject_id  # неможливо скористатися f-стрічкою через предмети, що мають у назві апостроф
-               FROM `{group_id}`.subjects
-               WHERE title = %s;"""
+                FROM `{group_id}`.subjects
+                WHERE title = %s;"""
     db.my_cursor.execute(query, (subject,))
     temp = db.my_cursor.fetchone()
 
@@ -1017,9 +1027,9 @@ async def create_queue(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.create_queue_st.set()
     subjects = get_subjects(group_id)
     if subjects:
+        await Form.create_queue_st.set()
         string = '📝 Оберіть предмет, на який хочете створити чергу:\n\n'
         for subject, i in zip(subjects, range(len(subjects))):
             string += f'{i + 1}. {subject}\n'
@@ -1139,7 +1149,7 @@ async def clear_queue(message: types.Message, state: FSMContext):
 
     if subject in subjects:
         if subject in subjects_with_queues:
-            delete_users = f"""DELETE sign_ups FROM `{group_id}`.sign_ups
+            delete_users = f"""DELETE `{group_id}`.sign_ups FROM `{group_id}`.sign_ups
                               JOIN `{group_id}`.queues
                                      USING(id_queue)
                               JOIN `{group_id}`.subjects sb
@@ -1219,7 +1229,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
 
     if subject in subjects:
         if subject in subjects_with_queues:
-            delete_users = f"""DELETE sign_ups FROM `{group_id}`.sign_ups
+            delete_users = f"""DELETE `{group_id}`.sign_ups FROM `{group_id}`.sign_ups
                               JOIN `{group_id}`.queues
                                   USING(id_queue)
                               JOIN `{group_id}`.subjects sb
@@ -1233,7 +1243,7 @@ async def delete_queue(message: types.Message, state: FSMContext):
                 return
             else:
                 db.mydb.commit()
-            delete_users = f"""DELETE queues FROM `{group_id}`.queues
+            delete_users = f"""DELETE `{group_id}`.queues FROM `{group_id}`.queues
                               JOIN `{group_id}`.subjects sb
                                   USING(subject_id)
                               WHERE sb.title = %s;"""
@@ -1262,10 +1272,10 @@ async def show_needed_queue(message: types.Message):
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.show_queue_st.set()
     subjects_with_queues = get_subjects_with_queues(group_id)
 
     if subjects_with_queues:
+        await Form.show_queue_st.set()
         string = '📝 Виберіть предмет, на який шукаєте чергу:\n'
         for subject, i in zip(subjects_with_queues, range(len(subjects_with_queues))):
             string += f'{i + 1}. {subject}\n'
