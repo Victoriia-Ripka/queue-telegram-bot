@@ -20,7 +20,9 @@ logging.basicConfig(level=logging.INFO)
 class Form(StatesGroup):
     subject = State()
     teacher = State()
-    info = State()
+
+    add_info = State()
+    delete_info = State()
 
     update_subject = State()
     update_teacher = State()
@@ -145,7 +147,7 @@ async def add_subject(message: types.Message, state: FSMContext):
             number = int(data[-1])
         except ValueError:
             await state.finish()
-            await message.answer(f'1️⃣  Після назви повинен бути вказаний номер викладача зі списку'
+            await message.answer(f'1️⃣ Після назви повинен бути вказаний номер викладача зі списку'
                                  f'\n\nСпробувати ще раз: /add_subject')
             return
 
@@ -318,13 +320,13 @@ async def add_teacher(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='add_teacher_info')
 async def add_teacher_info_start(message: types.Message):
-    group_id = str(message.chat.id)
     if not check_database(message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
-    await Form.info.set()
+    group_id = str(message.chat.id)
     teachers = get_teachers(group_id)
     if teachers:
+        await Form.add_info.set()
         string = '👩‍🏫 Список викладачів:\n'
         for teacher, i in zip(teachers, range(len(teachers))):
             string += f'{i + 1}. {teacher}\n'
@@ -335,7 +337,7 @@ async def add_teacher_info_start(message: types.Message):
     await message.answer(string)
 
 
-@dp.message_handler(state=Form.info)
+@dp.message_handler(state=Form.add_info)
 async def add_teacher_info(message: types.Message, state: FSMContext):
     group_id = str(message.chat.id)
     data = message.values['text'].split(', ')
@@ -355,7 +357,7 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
             number = int(data[0])
         except ValueError:
             await state.finish()
-            await message.answer('1️⃣  Першим повинен бути номер\n\nСпробувати ще раз: /add_teacher_info')
+            await message.answer('1️⃣ Першим повинен бути номер\n\nСпробувати ще раз: /add_teacher_info')
             return
         separator = ' '
         del data[0]
@@ -396,9 +398,81 @@ async def add_teacher_info(message: types.Message, state: FSMContext):
                              '\n\nСпробувати ще раз: /add_teacher_info')
     else:
         if info_exists:
-            await message.answer(f'🔄 Інформацію оновлено')
+            await message.answer(f'🔄 Інформацію про викладача {name} оновлено')
         else:
-            await message.answer(f'✅ Інформацію додано')
+            await message.answer(f'✅ Інформацію про викладача {name} додано')
+    await state.finish()
+    return
+
+
+@dp.message_handler(commands='delete_teacher_info')
+async def delete_teacher_info_start(message: types.Message):
+    if not check_database(message):
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
+    group_id = str(message.chat.id)
+    teachers = get_teachers(group_id)
+    if teachers:
+        await Form.delete_info.set()
+        string = '👩‍🏫 Список викладачів:\n'
+        for teacher, i in zip(teachers, range(len(teachers))):
+            string += f'{i + 1}. {teacher}\n'
+        string += '\n📝 Введіть номер викладача зі списку, інформацію про якого Ви хочете видалити'
+    else:
+        string = '🫥 Список викладачів порожній'
+        string += '\n\nДодати викладача: /add_teacher'
+    await message.answer(string)
+
+
+@dp.message_handler(state=Form.delete_info)
+async def delete_teacher_info(message: types.Message, state: FSMContext):
+    if message.values['text'][0] == '/':
+        if message.values['text'] == '/back' or message.values['text'] == '/back@kpi_q_bot':
+            await state.finish()
+            await message.answer('🔙 Повернуто в головне меню')
+            return
+        else:
+            await message.answer('📋 Перед використанням нової команди '
+                                 'завершіть роботу зі старою або поверніться в головне меню командою /back'
+                                 '\n\n⬆ Зараз бот досі очікує відповіді на попереднє повідомлення')
+            return
+    group_id = str(message.chat.id)
+    teachers = get_teachers(group_id)
+
+    data = message.values['text'].split(' ')
+    print('\033[0m')
+    print(data, type(data))
+    if len(data) != 1:
+        await state.finish()
+        await message.answer('🗿 Ви ввели неправильну кількість параметрів. Потрібно ввести одне число — '
+                             'номер викладача зі списку, інформацію про якого ви бажаєте видалити'
+                             '\n\nСпробувати ще раз: /delete_teacher_info')
+        return
+    data = data[0]
+    print(data, type(data))
+
+    try:
+        teacher_number = int(data)
+    except ValueError:
+        await state.finish()
+        await message.answer('1️⃣ Введіть число — номер викладача зі списку, інформацію про якого ви бажаєте видалити'
+                             '\n\nСпробувати ще раз: /delete_teacher_info')
+        return
+
+    teacher_name = teachers[teacher_number-1]
+    print(teacher_name, type(teacher_name))
+
+    query = f"""UPDATE `{group_id}`.teachers SET info = NULL WHERE name = %s;"""
+    try:
+        db.my_cursor.execute(query, (teacher_name,))
+    except mysql.connector.DatabaseError:
+        await state.finish()
+        await message.answer('🔧 Виникла проблема із запитом до бази даних\n\nСпробувати ще раз: /delete_teacher_info')
+        return
+    else:
+        db.mydb.commit()
+
+    await message.answer(f'🚮 Інформацію про викладача {teacher_name} було видалено')
     await state.finish()
     return
 
@@ -1532,7 +1606,7 @@ async def skip(message: types.Message):
         try:
             arguments = int(arguments)
         except ValueError:
-            await message.answer('1️⃣  Аргумент повинен бути лише числом!')
+            await message.answer('1️⃣ Аргумент повинен бути лише числом!')
             return
     else:
         arguments = 1
