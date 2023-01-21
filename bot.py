@@ -1239,7 +1239,7 @@ async def show_needed_queue(message: types.Message, state: FSMContext):
             await state.finish()
             return
 
-    queue_str = queue_to_str(fetch_queue(group_id, get_subject_id(subject)))
+    queue_str = queue_to_str(fetch_queue(group_id, get_subject_id(group_id, subject)))
 
     await message.answer(queue_str)
 
@@ -1315,10 +1315,7 @@ def queue_to_str(queue):
     queue_str = ''
     if queue:
         for i, username, firstname in queue:
-            if username:
-                queue_str += f'{i}. {firstname} ({username})\n'
-            else:
-                queue_str += f'{i}. {firstname}\n'
+            queue_str += f'{i}. {firstname} ({username})\n' if username else f'{i}. {firstname}\n'
     else:
         queue_str += '🫥 Черга порожня\n'
     queue_str += '\nЗаписатися в чергу: /sign_up <i>{номер або назва предмету} {місце в черзі (за бажанням)}</i>' \
@@ -1335,33 +1332,18 @@ def active_queue_to_str(queue, end, active_student=0, next_student=0):
     if queue:
         if end:
             for i, username, firstname in queue:
-                if username:
-                    queue_str += f'<del>{i}. {firstname} ({username})</del>\n'
-                else:
-                    queue_str += f'<del>{i}. {firstname}</del>\n'
+                queue_str += f'<del>{i}. {firstname} ({username})</del>\n' if username else f'<del>{i}. {firstname}</del>\n'
             queue_str += '\nЧерга закінчена 🔚\n'
         else:
             for i, username, firstname in queue:
                 if i == active_student:
-                    if username:
-                        queue_str += f'{i}. <b>{firstname} (@{username})</b> 🟢\n'
-                    else:
-                        queue_str += f'{i}. <b>{firstname}</b> 🟢\n'
+                    queue_str += f'{i}. <b>{firstname} (@{username})</b> 🟢\n' if username else f'{i}. <b>{firstname}</b> 🟢\n'
                 elif i == next_student:
-                    if username:
-                        queue_str += f'{i}. <i>{firstname} (@{username}) — приготуватися</i>\n'
-                    else:
-                        queue_str += f'{i}. <i>{firstname} — приготуватися</i>\n'
+                    queue_str += f'{i}. <i>{firstname} (@{username}) — приготуватися</i>\n' if username else f'{i}. <i>{firstname} — приготуватися</i>\n'
                 elif i < active_student:
-                    if username:
-                        queue_str += f'<del>{i}. {firstname} ({username})</del>\n'
-                    else:
-                        queue_str += f'<del>{i}. {firstname}</del>\n'
+                    queue_str += f'<del>{i}. {firstname} ({username})</del>\n' if username else f'<del>{i}. {firstname}</del>\n'
                 else:
-                    if username:
-                        queue_str += f'{i}. {firstname} ({username})\n'
-                    else:
-                        queue_str += f'{i}. {firstname}\n'
+                    queue_str += f'{i}. {firstname} ({username})\n' if username else f'{i}. {firstname}\n'
             queue_str += '\nЧерга активна ☑\n'
     else:
         queue_str += '🫥 Черга порожня\n'
@@ -1514,8 +1496,8 @@ async def next(message: types.Message):
 
         active_subject = ''
         active_student = 0
-        db.my_cursor.execute(f"UPDATE `{group_id}`.system_settings SET `active_student` = {active_student}, "
-                                                                     f"`active_subject` = '{active_subject}';")
+        db.my_cursor.execute(f"UPDATE `{group_id}`.system_settings "
+                             f"SET `active_student` = {active_student}, `active_subject` = '{active_subject}';")
         db.mydb.commit()
 
     await message.answer(queue_str)
