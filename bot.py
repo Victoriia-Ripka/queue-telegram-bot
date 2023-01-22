@@ -50,7 +50,8 @@ async def help(message: types.Message):
     text = '⚙ Всі команди бота <b>Q Bot KPI</b>:\n' \
            '\n/start — запустити бота для цієї групи' \
            '\n/help — вивести всі команди' \
-           '\ntechnical_report — отримати технічний звіт' \
+           '\n/technical_report — отримати технічний звіт'\
+           '\n/documentation — отримати документацію бота'\
            '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
            '\n/all_students — вивести всіх студентів' \
            '\n/all_subjects — вивести всі предмети' \
@@ -58,6 +59,7 @@ async def help(message: types.Message):
            '\n/add_subject — додати предмет' \
            '\n/add_teacher — додати викладача' \
            '\n/add_teacher_info — додати або оновити додаткову інформацію про викладача' \
+           '\n/delete_teacher_info — видалити додаткову інформацію про викладача' \
            '\n/update_subject — оновити предмет' \
            '\n/update_teacher — оновити викладача' \
            '\n/delete_subject — видалити предмет' \
@@ -88,7 +90,12 @@ async def technical_report(message: types.Message):
              'ℹ Бот створено студентами НТУУ "Київський політехнічний інститут імені І. Сікорського" у 2023 році ' \
              'початково для використання в межах університету, а потім і для всіх інших закладів освіти та потреб'
     await message.answer(report)  # мінус на початку в ID автоматично мається на увазі
-    return
+
+
+@dp.message_handler(commands='documentation')
+async def documentation(message: types.Message):
+    doc = """Напишемо піздату документацію"""
+    await message.answer(doc)
 
 
 # @dp.message_handler(commands='end')
