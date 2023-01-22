@@ -202,7 +202,6 @@ async def add_subject(message: types.Message, state: FSMContext):
         data.pop()
         title = separator.join(data)
 
-        print(len(title))
         if len(title) > 200:
             await state.finish()
             await message.answer('🙆‍♀ Задовга назва предмету (більше 200 символів)'
@@ -479,8 +478,6 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
     teachers = get_teachers(group_id)
 
     data = message.values['text'].split(' ')
-    print('\033[0m')
-    print(data, type(data))
     if len(data) != 1:
         await state.finish()
         await message.answer('🗿 Ви ввели неправильну кількість параметрів. Потрібно ввести одне число — '
@@ -488,7 +485,6 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
                              '\n\nСпробувати ще раз: /delete_teacher_info')
         return
     data = data[0]
-    print(data, type(data))
 
     try:
         teacher_number = int(data)
@@ -499,7 +495,6 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
         return
 
     teacher_name = teachers[teacher_number - 1]
-    print(teacher_name, type(teacher_name))
 
     query = f"""UPDATE `{group_id}`.teachers SET info = NULL WHERE name = %s;"""
     try:
@@ -1599,11 +1594,9 @@ async def next(message: types.Message):
 
         next_student = active_student + 1
         if active_student != positions[-1]:
-            print(f'Ми пройшли перевірку на неостанній елемент, коли active_student та next_student '
-                  f'мали значення {active_student} та {next_student}. Останній елемент в позишинс: {positions[-1]}')
             while next_student not in positions:
                 next_student += 1
-        print(next_student)
+
         queue_str = active_queue_to_str(queue, end, active_student, next_student)
     else:
         if not queue:
@@ -1717,7 +1710,6 @@ async def skip(message: types.Message):
         else:
             move_sign_ups += f'IN {positions[range_of_indeces]};'
 
-        print(move_sign_ups)
         try:
             db.my_cursor.execute(move_sign_ups)
         except mysql.connector.DatabaseError:
@@ -1728,7 +1720,6 @@ async def skip(message: types.Message):
 
         make_sign_up = f"""INSERT INTO `{group_id}`.sign_ups
                            VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});"""
-        print(make_sign_up)
         try:
             db.my_cursor.execute(make_sign_up)
         except mysql.connector.DatabaseError:
@@ -2138,11 +2129,9 @@ async def sign_out(message: types.Message):
                                AND id_queue = %s;"""
             db.my_cursor.execute(check_sign_up, (user_id, id_queue))
             position = db.my_cursor.fetchall()
-            print('fetched positions =', position)
 
             if position:
                 position = position[-1][0]  # беремо останню позицію, якщо студент хоче виписатися з доздачі
-                print('saved position =', position, '\ntype of saved position:', type(position))
 
                 delete_sign_up = f"""DELETE FROM `{group_id}`.sign_ups
                                      WHERE id_queue = {id_queue} AND position = {position};"""
@@ -2182,7 +2171,7 @@ def check_database(message: types.Message):
 async def start(message: types.Message):
     group_id = str(message.chat.id)
 
-    print(group_id)  # тимчасово (технічно)
+    print(group_id)  # лог
 
     is_group = True if group_id[0] == '-' else False
     if not is_group:
