@@ -1624,15 +1624,16 @@ async def next(message: types.Message):
 
 @dp.message_handler(commands='skip')
 async def skip(message: types.Message):
+    if not check_database(message):
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
+
     group_id = str(message.chat.id)
     db.my_cursor.execute(f'SELECT `active_subject`, `active_student` FROM `{group_id}`.system_settings;')
     fetched = db.my_cursor.fetchone()
     active_subject = fetched[0]
     active_student = fetched[1]
 
-    if not check_database(message):
-        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
-        return
     if not active_subject:
         await message.answer('🙄 Пропустити студента(-ів) можна лише в активній черзі!')
         return
@@ -1674,14 +1675,14 @@ async def skip(message: types.Message):
                         WHERE telegram_user_id = %s
                         AND id_queue = %s;"""
     db.my_cursor.execute(check_sign_up, (user_id, id_queue))
-    position = db.my_cursor.fetchone()
+    position = db.my_cursor.fetchall()
 
     if not position:
         await message.answer('📜 Ви не записані в активну чергу, щоб пропускати когось')
         return
 
-    position = position[0]
-    if position >= active_student:  # пофіксити баг з пропуском при перезаписі
+    position = position[-1][0]
+    if position >= active_student:
         queue = fetch_queue(group_id, get_subject_id(group_id))
         positions = tuple(map(lambda x: x[0], queue))
 
