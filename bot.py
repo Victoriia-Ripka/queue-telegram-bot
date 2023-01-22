@@ -94,8 +94,25 @@ async def technical_report(message: types.Message):
 
 @dp.message_handler(commands='documentation')
 async def documentation(message: types.Message):
-    doc = """Напишемо піздату документацію"""
-    await message.answer(doc)
+    with open(file='documentation.txt', encoding='utf-8', mode='r') as file:
+        all_lines = file.readlines()
+        doc = ''
+        fragment = ''
+        for line in all_lines:
+            if len(line) <= 1:
+                fragment += '\n\n'
+                if len(doc) + len(fragment) > 4096:
+                    await message.answer(doc)
+                    doc = fragment
+                else:
+                    doc += fragment
+                fragment = ''
+            else:
+                line = line.rstrip()
+                fragment += line + ' '
+        doc += fragment
+        await message.answer(doc)
+    file.close()
 
 
 # @dp.message_handler(commands='end')
@@ -185,7 +202,6 @@ async def add_subject(message: types.Message, state: FSMContext):
         data.pop()
         title = separator.join(data)
 
-        print(len(title))
         if len(title) > 200:
             await state.finish()
             await message.answer('🙆‍♀ Задовга назва предмету (більше 200 символів)'
@@ -462,8 +478,6 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
     teachers = get_teachers(group_id)
 
     data = message.values['text'].split(' ')
-    print('\033[0m')
-    print(data, type(data))
     if len(data) != 1:
         await state.finish()
         await message.answer('🗿 Ви ввели неправильну кількість параметрів. Потрібно ввести одне число — '
@@ -471,7 +485,6 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
                              '\n\nСпробувати ще раз: /delete_teacher_info')
         return
     data = data[0]
-    print(data, type(data))
 
     try:
         teacher_number = int(data)
@@ -482,7 +495,6 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
         return
 
     teacher_name = teachers[teacher_number - 1]
-    print(teacher_name, type(teacher_name))
 
     query = f"""UPDATE `{group_id}`.teachers SET info = NULL WHERE name = %s;"""
     try:
@@ -1582,11 +1594,9 @@ async def next(message: types.Message):
 
         next_student = active_student + 1
         if active_student != positions[-1]:
-            print(f'Ми пройшли перевірку на неостанній елемент, коли active_student та next_student '
-                  f'мали значення {active_student} та {next_student}. Останній елемент в позишинс: {positions[-1]}')
             while next_student not in positions:
                 next_student += 1
-        print(next_student)
+
         queue_str = active_queue_to_str(queue, end, active_student, next_student)
     else:
         if not queue:
@@ -1607,15 +1617,16 @@ async def next(message: types.Message):
 
 @dp.message_handler(commands='skip')
 async def skip(message: types.Message):
+    if not check_database(message):
+        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
+        return
+
     group_id = str(message.chat.id)
     db.my_cursor.execute(f'SELECT `active_subject`, `active_student` FROM `{group_id}`.system_settings;')
     fetched = db.my_cursor.fetchone()
     active_subject = fetched[0]
     active_student = fetched[1]
 
-    if not check_database(message):
-        await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
-        return
     if not active_subject:
         await message.answer('🙄 Пропустити студента(-ів) можна лише в активній черзі!')
         return
@@ -1645,26 +1656,26 @@ async def skip(message: types.Message):
     to_skip = arguments
 
     get_queue_id = f"""SELECT id_queue
-                      FROM `{group_id}`.queues
-                      JOIN `{group_id}`.subjects sb
-                          USING (subject_id)
-                      WHERE sb.title = %s;"""
+                       FROM `{group_id}`.queues
+                       JOIN `{group_id}`.subjects sb
+                           USING (subject_id)
+                       WHERE sb.title = %s;"""
     db.my_cursor.execute(get_queue_id, (active_subject,))
     id_queue = db.my_cursor.fetchone()[0]
 
     check_sign_up = f"""SELECT position
-                       FROM `{group_id}`.sign_ups
-                       WHERE telegram_user_id = %s
-                       AND id_queue = %s;"""
+                        FROM `{group_id}`.sign_ups
+                        WHERE telegram_user_id = %s
+                        AND id_queue = %s;"""
     db.my_cursor.execute(check_sign_up, (user_id, id_queue))
-    position = db.my_cursor.fetchone()
+    position = db.my_cursor.fetchall()
 
     if not position:
         await message.answer('📜 Ви не записані в активну чергу, щоб пропускати когось')
         return
 
-    position = position[0]
-    if position >= active_student:  # пофіксити баг з пропуском при перезаписі
+    position = position[-1][0]
+    if position >= active_student:
         queue = fetch_queue(group_id, get_subject_id(group_id))
         positions = tuple(map(lambda x: x[0], queue))
 
@@ -1678,7 +1689,7 @@ async def skip(message: types.Message):
             range_of_indeces = slice(position_index + 1, index_to_jump_to + 1)
         else:
             await message.answer('🔚 Неможливо пропустити більше студентів, '
-                                 f'ніж записано в черзі після студента {user_name}')
+                                 f'ніж записано в черзі після студента {user_name}, що на позиції {position}')
             return
 
         delete_sign_up = f"""DELETE FROM `{group_id}`.sign_ups
@@ -1699,7 +1710,6 @@ async def skip(message: types.Message):
         else:
             move_sign_ups += f'IN {positions[range_of_indeces]};'
 
-        print(move_sign_ups)
         try:
             db.my_cursor.execute(move_sign_ups)
         except mysql.connector.DatabaseError:
@@ -1710,7 +1720,6 @@ async def skip(message: types.Message):
 
         make_sign_up = f"""INSERT INTO `{group_id}`.sign_ups
                            VALUES (DEFAULT, {id_queue}, {user_id}, {positions[index_to_jump_to]});"""
-        print(make_sign_up)
         try:
             db.my_cursor.execute(make_sign_up)
         except mysql.connector.DatabaseError:
@@ -1980,16 +1989,15 @@ async def sign_up(message: types.Message):
     exist_pos = db.my_cursor.fetchall()
     exist_pos = tuple(map(lambda x: x[0], exist_pos))
 
-    if exist_pos:
-        max_pos = max(exist_pos)
-    else:
-        max_pos = 0
+    max_pos = max(exist_pos) if exist_pos else 0
 
-    if max_pos > active_student:
+    if max_pos >= active_student:
         await message.answer(f'📃 {user_name} вже записаний(-а) в цю чергу на місце {exist_pos[0]}'
                              f'\n\n☝ Щоб перезаписатися на інше місце, спочатку випишіться з черги, '
-                             f'а тоді запишіться заново'
-                             '\n\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>')
+                             f'а тоді запишіться заново. Також можна пропустити студентів вперед. '
+                             f'Записатися на доздачу можна буде лише після того, як Ви здасте перший раз'
+                             '\n\nВиписатися з черги: /sign_out <i>{номер або назва предмету}</i>'
+                             '\n\nПропустити студентів: /skip <i>{кількість студентів (за замовчуванням: 1)}</i>')
         return
 
     if not position:  # Випадок, коли юзер вказав лише назву предмету. Записуємо на перше вільне місце
@@ -2120,10 +2128,10 @@ async def sign_out(message: types.Message):
                                WHERE telegram_user_id = %s
                                AND id_queue = %s;"""
             db.my_cursor.execute(check_sign_up, (user_id, id_queue))
-            position = db.my_cursor.fetchone()
+            position = db.my_cursor.fetchall()
 
             if position:
-                position = position[0]
+                position = position[-1][0]  # беремо останню позицію, якщо студент хоче виписатися з доздачі
 
                 delete_sign_up = f"""DELETE FROM `{group_id}`.sign_ups
                                      WHERE id_queue = {id_queue} AND position = {position};"""
@@ -2163,7 +2171,7 @@ def check_database(message: types.Message):
 async def start(message: types.Message):
     group_id = str(message.chat.id)
 
-    print(group_id)  # тимчасово (технічно)
+    print(group_id)  # лог
 
     is_group = True if group_id[0] == '-' else False
     if not is_group:
@@ -2179,9 +2187,10 @@ async def start(message: types.Message):
         except Exception as error:
             print('Cause: {}'.format(error))
         else:
-            await message.answer(f"🫡 Розпочинаю роботу в групі {message.chat.title}")
+            await message.answer(f"🫡 Розпочинаю роботу в групі {message.chat.title}"
+                                 f"\n\n📄 Документація бота: /documentation")
 
-        print(f'\nAll tables for group \033[4m{message.chat.title}\033[0m\033[92m are ready')
+        print(f'\n\033[92mAll tables for group \033[4m{message.chat.title}\033[0m\033[92m are ready')
         print(f'\n\033[1mBOT STARTED FOR GROUP \033[4m{message.chat.title}\n\033[0m')
     else:
         await message.answer(f"😉 Я вже працюю в цій групі. Можна користуватися мною")
@@ -2192,7 +2201,7 @@ if __name__ == '__main__':
     try:
         print('\033[93mInitializing database server...\n')
         db.connect_to_server()
-        print('\033[92mSuccessfully connected to the database server\n')
+        print('\033[92mSuccessfully connected to the database server\033[0m\n')
 
         executor.start_polling(dp, skip_updates=True)
     except Exception as error:
