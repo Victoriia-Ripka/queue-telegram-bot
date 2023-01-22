@@ -50,6 +50,7 @@ async def help(message: types.Message):
     text = '⚙ Всі команди бота <b>Q Bot KPI</b>:\n' \
            '\n/start — запустити бота для цієї групи' \
            '\n/help — вивести всі команди' \
+           '\ntechnical_report — отримати технічний звіт' \
            '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
            '\n/all_students — вивести всіх студентів' \
            '\n/all_subjects — вивести всі предмети' \
@@ -74,6 +75,20 @@ async def help(message: types.Message):
            '\n/sign_out <i>{номер або назва предмету}</i> — виписатися з черги на предмет' \
            '\n/skip <i>{кількість студентів (за замовчуванням: 1)}</i> — пропустити певну кількість людей вперед'
     await message.answer(text)
+
+
+@dp.message_handler(commands='technical_report')
+async def technical_report(message: types.Message):
+    report = '⚙ Технічний звіт:\n\n' \
+             f'🆔 ID вашої групи: <b>{str(message.chat.id)[1:]}</b>\n' \
+             '🤖 Версія бота: <b>1.0</b>\n' \
+             '🖥 Розробники: <i>Дмитро Стельмах (@d_stelmakh7592)\n' \
+             '                               Віталій Солоничний (@Sulphur14)\n' \
+             '                               Вікторія Ріпка (@t0n_am0ur4ik)</i>\n\n' \
+             'ℹ Бот створено студентами НТУУ "Київський політехнічний інститут імені І. Сікорського" у 2023 році ' \
+             'початково для використання в межах університету, а потім і для всіх інших закладів освіти та потреб'
+    await message.answer(report)  # мінус на початку в ID автоматично мається на увазі
+    return
 
 
 # @dp.message_handler(commands='end')
@@ -108,7 +123,7 @@ async def add_subject_start(message: types.Message):
             string += f'{i + 1}. {subject}\n'
     else:
         string = '🫥 Список вже існуючих предметів порожній\n'
-    
+
     teachers = get_teachers(group_id)
     if teachers:
         await Form.subject.set()
@@ -157,7 +172,7 @@ async def add_subject(message: types.Message, state: FSMContext):
                                  f'\n\nСпробувати ще раз: /add_subject')
             return
 
-        teacher = teachers[number-1]
+        teacher = teachers[number - 1]
         teacher_id = get_teacher_id(group_id, teacher)
         separator = ' '
         data.pop()
@@ -212,8 +227,8 @@ async def add_subject(message: types.Message, state: FSMContext):
     else:
         await message.answer(f'✅ Предмет {title} викладача {teacher_name} додано до списку')
     await state.finish()
-    return       
-    
+    return
+
 
 @dp.message_handler(commands='add_teacher')
 async def add_teacher_start(message: types.Message):
@@ -459,7 +474,7 @@ async def delete_teacher_info(message: types.Message, state: FSMContext):
                              '\n\nСпробувати ще раз: /delete_teacher_info')
         return
 
-    teacher_name = teachers[teacher_number-1]
+    teacher_name = teachers[teacher_number - 1]
     print(teacher_name, type(teacher_name))
 
     query = f"""UPDATE `{group_id}`.teachers SET info = NULL WHERE name = %s;"""
@@ -489,7 +504,7 @@ async def update_subject_start(message: types.Message):
         string = '📚 Список існуючих предметів:\n\n'
         for subject, i in zip(subjects, range(len(subjects))):
             string += f'{subject[0]}. {subject[1]} — {subject[2]}\n'
-        
+
         teachers = get_teachers(group_id)
         string += '\n👩‍🏫 Список доданих викладачів:\n'
         for teacher, i in zip(teachers, range(len(teachers))):
@@ -501,7 +516,7 @@ async def update_subject_start(message: types.Message):
         string = '🫥 Список предметів порожній. Спочатку додайте предмет'
         string += '\n\nДодати предмет: /add_subject'
     await message.answer(string)
-    return 
+    return
 
 
 @dp.message_handler(state=Form.update_subject)
@@ -764,7 +779,7 @@ async def delete_subject_start(message: types.Message):
         string = '🫥 Список предметів порожній\n'
         string += '\nДодати предмет: /add_subject'
     await message.answer(string)
-    return 
+    return
 
 
 @dp.message_handler(state=Form.delete_subject)
@@ -931,7 +946,7 @@ def get_teachers_with_id(group_id):
 
     teachers = []
     for i, teacher in enumerate(result):
-        teachers.append((i+1, teacher[1]))
+        teachers.append((i + 1, teacher[1]))
 
     return tuple(teachers)
 
@@ -944,7 +959,7 @@ def get_teachers_with_all_info(group_id):
 
     teachers = []
     for i, teacher in enumerate(result):
-        teachers.append((i+1, teacher[0], teacher[1], teacher[2], teacher[3], teacher[4]))
+        teachers.append((i + 1, teacher[0], teacher[1], teacher[2], teacher[3], teacher[4]))
 
     return tuple(teachers)
 
@@ -982,7 +997,7 @@ def get_subjects_with_teachers(group_id):
 
     subjects = []
     for i, subject in enumerate(result):
-        subjects.append((i+1, subject[1], subject[2]))
+        subjects.append((i + 1, subject[1], subject[2]))
 
     return tuple(subjects)
 
@@ -1112,7 +1127,7 @@ async def clear_queue(message: types.Message):
         string += '\n📝 Введіть номер предмету, на який бажаєте очистити чергу'
     else:
         string = '🫥 Список предметів з чергами порожній' \
-              '\n\nСтворити чергу на предмет: /create_queue\nДодати предмет: /add_subject'
+                 '\n\nСтворити чергу на предмет: /create_queue\nДодати предмет: /add_subject'
     await message.answer(string)
 
 
@@ -1653,7 +1668,7 @@ async def skip(message: types.Message):
 
         index_to_jump_to = position_index + to_skip
         if index_to_jump_to <= positions.index(positions[-1]):
-            range_of_indeces = slice(position_index+1, index_to_jump_to+1)
+            range_of_indeces = slice(position_index + 1, index_to_jump_to + 1)
         else:
             await message.answer('🔚 Неможливо пропустити більше студентів, '
                                  f'ніж записано в черзі після студента {user_name}')
@@ -2164,6 +2179,7 @@ async def start(message: types.Message):
     else:
         await message.answer(f"😉 Я вже працюю в цій групі. Можна користуватися мною")
     return
+
 
 if __name__ == '__main__':
     try:
