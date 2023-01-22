@@ -94,8 +94,25 @@ async def technical_report(message: types.Message):
 
 @dp.message_handler(commands='documentation')
 async def documentation(message: types.Message):
-    doc = """Напишемо піздату документацію"""
-    await message.answer(doc)
+    with open(file='documentation.txt', encoding='utf-8', mode='r') as file:
+        all_lines = file.readlines()
+        doc = ''
+        fragment = ''
+        for line in all_lines:
+            if len(line) <= 1:
+                fragment += '\n\n'
+                if len(doc) + len(fragment) > 4096:
+                    await message.answer(doc)
+                    doc = fragment
+                else:
+                    doc += fragment
+                fragment = ''
+            else:
+                line = line.rstrip()
+                fragment += line + ' '
+        doc += fragment
+        await message.answer(doc)
+    file.close()
 
 
 # @dp.message_handler(commands='end')
@@ -1645,17 +1662,17 @@ async def skip(message: types.Message):
     to_skip = arguments
 
     get_queue_id = f"""SELECT id_queue
-                      FROM `{group_id}`.queues
-                      JOIN `{group_id}`.subjects sb
-                          USING (subject_id)
-                      WHERE sb.title = %s;"""
+                       FROM `{group_id}`.queues
+                       JOIN `{group_id}`.subjects sb
+                           USING (subject_id)
+                       WHERE sb.title = %s;"""
     db.my_cursor.execute(get_queue_id, (active_subject,))
     id_queue = db.my_cursor.fetchone()[0]
 
     check_sign_up = f"""SELECT position
-                       FROM `{group_id}`.sign_ups
-                       WHERE telegram_user_id = %s
-                       AND id_queue = %s;"""
+                        FROM `{group_id}`.sign_ups
+                        WHERE telegram_user_id = %s
+                        AND id_queue = %s;"""
     db.my_cursor.execute(check_sign_up, (user_id, id_queue))
     position = db.my_cursor.fetchone()
 
@@ -2120,10 +2137,12 @@ async def sign_out(message: types.Message):
                                WHERE telegram_user_id = %s
                                AND id_queue = %s;"""
             db.my_cursor.execute(check_sign_up, (user_id, id_queue))
-            position = db.my_cursor.fetchone()
+            position = db.my_cursor.fetchall()
+            print('fetched positions =', position)
 
             if position:
-                position = position[0]
+                position = position[-1][0]  # беремо останню позицію, якщо студент хоче виписатися з доздачі
+                print('saved position =', position, '\ntype of saved position:', type(position))
 
                 delete_sign_up = f"""DELETE FROM `{group_id}`.sign_ups
                                      WHERE id_queue = {id_queue} AND position = {position};"""
@@ -2179,9 +2198,10 @@ async def start(message: types.Message):
         except Exception as error:
             print('Cause: {}'.format(error))
         else:
-            await message.answer(f"🫡 Розпочинаю роботу в групі {message.chat.title}")
+            await message.answer(f"🫡 Розпочинаю роботу в групі {message.chat.title}"
+                                 f"\n\n📄 Документація бота: /documentation")
 
-        print(f'\nAll tables for group \033[4m{message.chat.title}\033[0m\033[92m are ready')
+        print(f'\n\033[92mAll tables for group \033[4m{message.chat.title}\033[0m\033[92m are ready')
         print(f'\n\033[1mBOT STARTED FOR GROUP \033[4m{message.chat.title}\n\033[0m')
     else:
         await message.answer(f"😉 Я вже працюю в цій групі. Можна користуватися мною")
@@ -2192,7 +2212,7 @@ if __name__ == '__main__':
     try:
         print('\033[93mInitializing database server...\n')
         db.connect_to_server()
-        print('\033[92mSuccessfully connected to the database server\n')
+        print('\033[92mSuccessfully connected to the database server\033[0m\n')
 
         executor.start_polling(dp, skip_updates=True)
     except Exception as error:
