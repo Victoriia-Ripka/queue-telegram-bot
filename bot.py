@@ -18,6 +18,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 class Form(StatesGroup):
+    password_confirmation = State()
+
     subject = State()
     teacher = State()
 
@@ -50,8 +52,9 @@ async def help(message: types.Message):
     text = '⚙ Всі команди бота <b>Q Bot KPI</b>:\n' \
            '\n/start — запустити бота для цієї групи' \
            '\n/help — вивести всі команди' \
-           '\n/technical_report — отримати технічний звіт'\
-           '\n/documentation — отримати документацію бота'\
+           '\n/technical_report — отримати технічний звіт' \
+           '\n/documentation — отримати документацію бота' \
+           '\n/full_reset — знищити всі дані (необхідний пароль)' \
            '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
            '\n/all_students — вивести всіх студентів' \
            '\n/all_subjects — вивести всі предмети' \
@@ -81,12 +84,18 @@ async def help(message: types.Message):
 
 @dp.message_handler(commands='technical_report')
 async def technical_report(message: types.Message):
+    group_id = str(message.chat.id)
+    db.my_cursor.execute(f'SELECT `password` FROM `{group_id}`.system_settings;')
+    password = db.my_cursor.fetchone()[0]
+
     report = '⚙ Технічний звіт:\n\n' \
-             f'🆔 ID вашої групи: <b>{str(message.chat.id)[1:]}</b>\n' \
+             f'🆔 ID вашої групи: <b>{group_id[1:]}</b>\n' \
+             f'🔑 Пароль вашої групи: <b>{password}</b>\n' \
              '🤖 Версія бота: <b>1.0</b>\n' \
-             '🖥 Розробники: <i>Дмитро Стельмах (@d_stelmakh7592)\n' \
-             '                               Віталій Солоничний (@Sulphur14)\n' \
-             '                               Вікторія Ріпка (@t0n_am0ur4ik)</i>\n\n' \
+             '🖥 Розробники:\n' \
+             '<i>Дмитро Стельмах (@d_stelmakh7592)\n' \
+             'Віталій Солоничний (@Sulphur14)\n' \
+             'Вікторія Ріпка (@t0n_am0ur4ik)</i>\n\n' \
              'ℹ Бот створено студентами НТУУ "Київський політехнічний інститут імені І. Сікорського" у 2023 році ' \
              'початково для використання в межах університету, а потім і для всіх інших закладів освіти та потреб'
     await message.answer(report)  # мінус на початку в ID автоматично мається на увазі
@@ -115,22 +124,39 @@ async def documentation(message: types.Message):
     file.close()
 
 
-# @dp.message_handler(commands='end')
-# async def end(message: types.Message):
-#     print('Start deleting DB...')
-#     sql_command = """DROP TABLE IF EXISTS `{group_id}`.`teachers` ;"""
-#     db.my_cursor.execute(sql_command)
-#     sql_command = """DROP TABLE IF EXISTS `{group_id}`.`Sign_ups` ;"""
-#     db.my_cursor.execute(sql_command)
-#     sql_command = """DROP TABLE IF EXISTS `{group_id}`.`Queues` ;"""
-#     db.my_cursor.execute(sql_command)
-#     sql_command = """DROP TABLE IF EXISTS `{group_id}`.`Students` ;"""
-#     db.my_cursor.execute(sql_command)
-#     sql_command = """DROP TABLE IF EXISTS `{group_id}`.`Subjects` ;"""
-#     db.my_cursor.execute(sql_command)
-#     print('All tables are deleted')
-#     text = 'All tables are deleted'
-#     await message.answer(text)
+@dp.message_handler(commands='full_reset')
+async def full_reset(message: types.Message):
+    await Form.password_confirmation.set()
+    await message.answer('🔑 Введіть пароль вашої групи'
+                         '\n\n☝🏼 Пароль групи можна знайти в технічному звіті по команді /technical_report. '
+                         'Зверніть увагу, що після знесення даних пароль буде змінено')
+
+
+@dp.message_handler(state=Form.password_confirmation)
+async def full_reset_password_confirmatiom(message: types.Message, state: FSMContext):
+    group_id = str(message.chat.id)
+    db.my_cursor.execute(f'SELECT `password` FROM `{group_id}`.system_settings;')
+    password = db.my_cursor.fetchone()[0]
+    entered_password = message.values['text']
+
+    if password != entered_password:
+        print(password, entered_password)
+        await state.finish()
+        await message.answer('☹ Відмовлено в доступі. Неправильний пароль!')
+        return
+    else:
+        db.delete_database(group_id)
+
+        await message.answer('☠ Всі дані було знищено\n\n🔧 Триває створення нової бази даних...')
+
+        db.create_database(group_id)
+        db.create_tables(group_id)
+        db.form_system_parameters(group_id)
+
+        await message.answer('😉 Бот готовий до роботи')
+
+    await state.finish()
+    return
 
 
 @dp.message_handler(commands='add_subject')
@@ -2183,6 +2209,7 @@ async def start(message: types.Message):
             db.start_settings()
             db.create_database(group_id)
             db.create_tables(group_id)
+            db.form_system_parameters(group_id)
             db.end_settings()
         except Exception as error:
             print('Cause: {}'.format(error))
