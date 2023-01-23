@@ -55,7 +55,7 @@ async def help(message: types.Message):
            '\n/technical_report — отримати технічний звіт' \
            '\n/documentation — отримати документацію бота' \
            '\n/full_reset — знищити всі дані (необхідний пароль)' \
-           '\n/back — повернутися в головне меню, коли бот очікує якісь дані' \
+           '\n/back — повернутися в головне меню, коли бот очікує якийсь ввід' \
            '\n/all_students — вивести всіх студентів' \
            '\n/all_subjects — вивести всі предмети' \
            '\n/all_teachers — вивести всіх викладачів' \
@@ -106,7 +106,7 @@ async def documentation(message: types.Message):
     with open(file='documentation.txt', encoding='utf-8', mode='r') as file:
         all_lines = file.readlines()
         doc = ''
-        fragment = ''
+        fragment = ''  # fragment = абзац
         for line in all_lines:
             if len(line) <= 1:
                 fragment += '\n\n'
@@ -1290,11 +1290,11 @@ async def delete_queue(message: types.Message, state: FSMContext):
     if subject in subjects:
         if subject in subjects_with_queues:
             delete_users = f"""DELETE `{group_id}`.sign_ups FROM `{group_id}`.sign_ups
-                              JOIN `{group_id}`.queues
-                                  USING(id_queue)
-                              JOIN `{group_id}`.subjects sb
-                                  USING(subject_id)
-                              WHERE sb.title = %s;"""
+                               JOIN `{group_id}`.queues
+                                   USING(id_queue)
+                               JOIN `{group_id}`.subjects sb
+                                   USING(subject_id)
+                               WHERE sb.title = %s;"""
             try:
                 db.my_cursor.execute(delete_users, (subject,))
             except mysql.connector.DatabaseError:
@@ -1304,9 +1304,9 @@ async def delete_queue(message: types.Message, state: FSMContext):
             else:
                 db.mydb.commit()
             delete_users = f"""DELETE `{group_id}`.queues FROM `{group_id}`.queues
-                              JOIN `{group_id}`.subjects sb
-                                  USING(subject_id)
-                              WHERE sb.title = %s;"""
+                               JOIN `{group_id}`.subjects sb
+                                   USING(subject_id)
+                               WHERE sb.title = %s;"""
             try:
                 db.my_cursor.execute(delete_users, (subject,))
             except mysql.connector.DatabaseError:
