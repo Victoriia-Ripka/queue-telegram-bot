@@ -286,8 +286,9 @@ async def add_teacher_start(message: types.Message):
         await message.answer('👉 Бот для цієї групи ще не активний. Запустіть його командою /start')
         return
     teachers = get_teachers(group_id)
+
+    await Form.teacher.set()
     if teachers:
-        await Form.teacher.set()
         string = '👩‍🏫 Список уже доданих викладачів:\n'
         for subject, i in zip(teachers, range(len(teachers))):
             string += f'{i + 1}. {subject}\n'
@@ -1048,7 +1049,7 @@ def get_subjects_with_teachers(group_id):
 
 
 def get_subjects_with_queues(group_id):
-    db.my_cursor.execute(f"""SELECT DISTINCT title FROM `{group_id}`.subjects
+    db.my_cursor.execute(f"""SELECT DISTINCT title, subject_id FROM `{group_id}`.subjects
                          WHERE subject_id IN
                          (SELECT subject_id FROM `{group_id}`.queues)
                          ORDER BY subject_id;""")
@@ -2017,7 +2018,7 @@ async def sign_up(message: types.Message):
 
     max_pos = max(exist_pos) if exist_pos else 0
 
-    if max_pos >= active_student:
+    if max_pos >= active_student and max_pos != 0:
         await message.answer(f'📃 {user_name} вже записаний(-а) в цю чергу на місце {exist_pos[0]}'
                              f'\n\n☝ Щоб перезаписатися на інше місце, спочатку випишіться з черги, '
                              f'а тоді запишіться заново. Також можна пропустити студентів вперед. '

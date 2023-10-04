@@ -37,6 +37,7 @@ def start_settings():
         """
         my_cursor.execute(query)
         mydb.commit()
+
     else:
         print('\033[91mQueryError: No valid connection to database for commiting a query\033[0m')
         exit(3)
