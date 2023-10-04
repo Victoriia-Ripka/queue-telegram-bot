@@ -1043,7 +1043,7 @@ def get_subjects_with_teachers(group_id):
 
     subjects = []
     for i, subject in enumerate(result):
-        subjects.appendf((i + 1, subject[1], subject[2]))
+        subjects.append((i + 1, subject[1], subject[2]))
 
     return tuple(subjects)
 
