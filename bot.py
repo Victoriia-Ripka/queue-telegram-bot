@@ -53,7 +53,7 @@ async def help(message: types.Message):
            '\n/start — запустити бота для цієї групи' \
            '\n/help — вивести всі команди' \
            '\n/technical_report — отримати технічний звіт' \
-           '\n/documentation — отримати документацію бота' \
+           '\n/information — отримати документацію бота' \
            '\n/full_reset — знищити всі дані (необхідний пароль)' \
            '\n/back — повернутися в головне меню, коли бот очікує якийсь ввід' \
            '\n/all_students — вивести всіх студентів' \
@@ -101,8 +101,8 @@ async def technical_report(message: types.Message):
     await message.answer(report)  # мінус на початку в ID автоматично мається на увазі
 
 
-@dp.message_handler(commands='documentation')
-async def documentation(message: types.Message):
+@dp.message_handler(commands='information')
+async def information(message: types.Message):
     with open(file='documentation.txt', encoding='utf-8', mode='r') as file:
         all_lines = file.readlines()
         doc = ''
