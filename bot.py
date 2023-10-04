@@ -1069,7 +1069,7 @@ def get_subject_id(group_id, subject=None):
 
     subject = subject if subject else active_subject
 
-    query = f"""SELECT subject_id  # неможливо скористатися f-стрічкою через предмети, що мають у назві апостроф
+    query = f"""SELECT subject_id
                 FROM `{group_id}`.subjects
                 WHERE title = %s;"""
     db.my_cursor.execute(query, (subject,))
